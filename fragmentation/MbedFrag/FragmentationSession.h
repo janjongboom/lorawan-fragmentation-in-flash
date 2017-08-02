@@ -144,6 +144,13 @@ public:
         }
     }
 
+    /**
+     * Get the number of lost fragments
+     */
+    int get_lost_frame_count() {
+        return _math.get_lost_frame_count();
+    }
+
 private:
     IFlash* _flash;
     FragmentationSessionOpts_t _opts;

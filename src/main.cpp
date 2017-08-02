@@ -23,6 +23,12 @@
 
 Serial pc(USBTX, USBRX);
 
+/**
+ * To see memory stats, add:
+ *    print_all_thread_info();
+ *    print_heap_and_isr_stack_info();
+ */
+
 int main() {
     pc.baud(115200);
 
