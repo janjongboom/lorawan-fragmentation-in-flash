@@ -1,0 +1,11 @@
+libmDot-dev-mbed5/
+mbed-os/
+.hg
+BUILD/
+mbed_settings.*
+.mbed
+.vscode/
+libxDot-mbed5/
+mbed-memory-status/
+fake-fw/fragments.txt
+fake-fw/test-crc64/test
