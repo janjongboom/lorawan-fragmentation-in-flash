@@ -36,6 +36,18 @@ If you're using a different flash chip, you'll need to implement the [BlockDevic
 
 The algorithm expects to be able to write to random addresses, which can span over multiple pages. The flash interface is supposed to hide this from the algorithm. For an example see the `AT45BlockDevice.h` driver.
 
+## Updating the application
+
+Currently the demo application is a simple blinky application, as it needs to be held in flash (which the xDot has little). If you want to update the application:
+
+1. Compile the application with bootloader support enabled (point it at the same bootloader).
+1. Copy the `_application.bin` file to the `test-fw` directory.
+1. Run:
+
+    ```
+    $ node create-packets-h.js my-app_application.bin ../src/packets.h
+    ```
+
 ## License
 
 * crc.h is derived from work by Salvatore Sanfilippo.
