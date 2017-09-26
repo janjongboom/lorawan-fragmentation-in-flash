@@ -1,49 +1,40 @@
-# LoRa Alliance Multicast Data Fragmentation for mbed OS 5
+# Firmware update on Multi-Tech xDot with forward error correction
 
-Work in progress. Based on the work by ARM, The Things Network and Semtech.
+This is a demonstration application which uses the LoRaWAN data fragmentation proposal schema to apply a firmware update on a Multi-Tech xDot.
 
-## Memory usage
+It:
 
-All memory is dynamically allocated on the heap, so you can unload heap objects when you start a data fragmentation session.
+* Demonstrates how to use [mbed-lorawan-frag-lib](https://github.com/janjongboom/mbed-lorawan-frag-lib) - a library for Low-Density Parity Encoding - to store an incoming firmware update in flash and use forward error correction to fix missing packets.
+* Stores all firmware packets in external flash (AT45 SPI Flash).
+* Integrates with a [bootloader](https://github.com/janjongboom/lorawan-at45-fota-bootloader), which will check the flash on startup, and uses the FlashIAP API to perform the firmware update.
 
-The amount of memory required for the algorithm depends on:
+You can run this application without access to a LoRaWAN network. [fota-lora-radio](https://github.com/armmbed/fota-lora-radio) uses the same libraries but also comes with a LoRa stack.
 
-* Number of fragments required for a full file (without the redundancy packets) (`nbFrag`).
-* The size of a data fragment (`fragSize`).
-* The maximum number of redundancy frames that are expected (`nbRedundancy`).
+## How to get started
 
-Memory required can be calculated via:
+1. Install mbed CLI and the GNU ARM Embedded Toolchain (4.9.3).
+1. Import this repository:
 
-```js
-  ((nbRedundancy / 8) * nbRedundancy) // matrixM2B
-+ (nbFrag * 2)                        // missingFrameIx
-+ (nbFrag)                            // matrixRow
-+ (fragSize)                          // matrixDataTemp
-+ (nbRedundancy * 3)                  // tempVector, tempVector2 and s
-```
+    ```
+    $ mbed import https://github.com/janjongboom/lorawan-fragmentation-in-flash
+    ```
 
-For a 100K firmware image, split in 201 byte fragments with 200 redundancy packets this comes down to ~7.331 bytes:
+1. Build the application:
 
-```js
-fragSize = 201;
-nbFrag = (100 * 1024 / fragSize | 0) + 1;
-nbRedundancy = 200;
+    ```
+    $ mbed compile -m xdot_l151cc -t GCC_ARM
+    ```
 
-// ((nbRedundancy / 8) * nbRedundancy) + (nbFrag*2) + (nbFrag) + (fragSize) + (nbRedundancy * 3)
-// 7331 bytes
-```
+1. Flash the application on your [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/) development board (or other xDot with AT45 SPI Flash).
+1. Attach a serial monitor at baud rate 9,600 to see the update happening.
 
-In addition:
-
-* Some small allocations are made when xor'ing lines while applying the redundant packets.
-* The FragmentationSession and FragmentationMath objects take up some space as well.
-* Your flash driver probably needs to allocate a buffer the size of it's page size (unless memory is directly addressable).
-
-On a Multi-Tech xDot you probably want to limit the number of redundancy frames to <100, given that an xDot running the Dot-Examples OTA_EXAMPLE has 7040 bytes of free heap space available.
+You can fake packet loss by commenting lines in `src/packets.h`.
 
 ## How to add a flash driver
 
-The algorithm expects to be able to write to random addresses, which can span over multiple pages. The flash interface is supposed to hide this from the algorithm. For an example see the `AT45Flash.h` driver.
+If you're using a different flash chip, you'll need to implement the [BlockDevice](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/storage/block_device/) interface. See `AT45BlockDevice.h` in the `at45-blockdevice` driver for more information.
+
+The algorithm expects to be able to write to random addresses, which can span over multiple pages. The flash interface is supposed to hide this from the algorithm. For an example see the `AT45BlockDevice.h` driver.
 
 ## License
 
