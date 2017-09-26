@@ -90,10 +90,12 @@ int main() {
     FragmentationCrc64 crc64(&at45, crc_buffer, sizeof(crc_buffer));
     uint64_t crc_res = crc64.calculate(opts.FlashOffset, (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
 
-    printf("Expected %08llx, hash was %08llx, success=%d\n", FAKE_PACKETS_HASH, crc_res, FAKE_PACKETS_HASH == crc_res);
-
-    if (FAKE_PACKETS_HASH != crc_res) {
-        // return 1;
+    if (FAKE_PACKETS_HASH == crc_res) {
+        printf("Hash verification OK (%08llx)\n", crc_res);
+    }
+    else {
+        printf("Hash verification NOK, hash was %08llx, expected %08llx\n", crc_res, FAKE_PACKETS_HASH);
+        return 1;
     }
 
     // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
@@ -103,12 +105,6 @@ int main() {
     update_params.signature = UpdateParams_t::MAGIC;
     update_params.hash = crc_res;
     at45.program(&update_params, FOTA_INFO_PAGE * at45.get_read_size(), sizeof(UpdateParams_t));
-
-    // debug("Writing: ");
-    // for (size_t ix = 0; ix < sizeof(UpdateParams_t); ix++) {
-    //     debug("%02x ", ((char*)&update_params)[ix]);
-    // }
-    // debug("\n");
 
     printf("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", FOTA_INFO_PAGE);
 
