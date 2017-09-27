@@ -21,6 +21,7 @@
 #include "FragmentationSession.h"
 #include "FragmentationCrc64.h"
 #include "UpdateParameters.h"
+#include "mbed_debug.h"
 
 // These values need to be the same between target application and bootloader!
 #define     FOTA_INFO_PAGE         0x1800    // The information page for the firmware update
@@ -35,7 +36,7 @@ int main() {
     AT45BlockDevice at45;
     int at45_init;
     if ((at45_init = at45.init()) != BD_ERROR_OK) {
-        printf("Failed to initialize AT45BlockDevice (%d)\n", at45_init);
+        debug("Failed to initialize AT45BlockDevice (%d)\n", at45_init);
         return 1;
     }
 
@@ -55,7 +56,7 @@ int main() {
 
     // with 26 packets, 204 size, 25 padding, 10 redundancy, we use 322 bytes of heap space
     if ((result = fragSession->initialize()) != FRAG_OK) {
-        printf("FragmentationSession initialize failed: %s\n", FragmentationSession::frag_result_string(result));
+        debug("FragmentationSession initialize failed: %s\n", FragmentationSession::frag_result_string(result));
         return 1;
     }
 
@@ -67,17 +68,17 @@ int main() {
         // Skip the first 3 bytes, as they contain metadata
         if ((result = fragSession->process_frame(frameCounter, buffer + 3, sizeof(FAKE_PACKETS[0]) - 3)) != FRAG_OK) {
             if (result == FRAG_COMPLETE) {
-                printf("FragmentationSession is complete at frame %d\n", frameCounter);
+                debug("FragmentationSession is complete at frame %d\n", frameCounter);
                 break;
             }
             else {
-                printf("FragmentationSession process_frame %d failed: %s\n",
+                debug("FragmentationSession process_frame %d failed: %s\n",
                     frameCounter, FragmentationSession::frag_result_string(result));
                 return 1;
             }
         }
 
-        printf("Processed frame with frame counter %d\n", frameCounter);
+        debug("Processed frame with frame counter %d\n", frameCounter);
     }
 
     // The data is now in flash. Free the fragSession
@@ -91,10 +92,10 @@ int main() {
     uint64_t crc_res = crc64.calculate(opts.FlashOffset, (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
 
     if (FAKE_PACKETS_HASH == crc_res) {
-        printf("Hash verification OK (%08llx)\n", crc_res);
+        debug("Hash verification OK (%08llx)\n", crc_res);
     }
     else {
-        printf("Hash verification NOK, hash was %08llx, expected %08llx\n", crc_res, FAKE_PACKETS_HASH);
+        debug("Hash verification NOK, hash was %08llx, expected %08llx\n", crc_res, FAKE_PACKETS_HASH);
         return 1;
     }
 
@@ -106,7 +107,7 @@ int main() {
     update_params.hash = crc_res;
     at45.program(&update_params, FOTA_INFO_PAGE * at45.get_read_size(), sizeof(UpdateParams_t));
 
-    printf("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", FOTA_INFO_PAGE);
+    debug("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", FOTA_INFO_PAGE);
 
     wait(osWaitForever);
 }
