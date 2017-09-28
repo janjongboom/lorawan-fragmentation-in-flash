@@ -7,6 +7,7 @@ It:
 * Demonstrates how to use [mbed-lorawan-frag-lib](https://github.com/janjongboom/mbed-lorawan-frag-lib) - a library for Low-Density Parity Encoding - to store an incoming firmware update in flash and use forward error correction to fix missing packets.
 * Stores all firmware packets in external flash (AT45 SPI Flash).
 * Integrates with a [bootloader](https://github.com/janjongboom/lorawan-at45-fota-bootloader), which will check the flash on startup, and uses the FlashIAP API to perform the firmware update.
+* Verifies that firmware was signed by a trusted party using RSA/SHA256 with public key held on device, and private key held by manufacturer.
 
 You can run this application without access to a LoRaWAN network. [fota-lora-radio](https://github.com/armmbed/fota-lora-radio) uses the same libraries but also comes with a LoRa stack.
 
