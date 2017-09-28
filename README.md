@@ -10,6 +10,15 @@ It:
 
 You can run this application without access to a LoRaWAN network. [fota-lora-radio](https://github.com/armmbed/fota-lora-radio) uses the same libraries but also comes with a LoRa stack.
 
+## Package format
+
+A firmware packet consists of two blocks:
+
+* RSA/SHA256 signature of the actual firmware (256 bytes).
+* Actual firmware.
+
+These two blocks should be concatenated.
+
 ## How to get started
 
 1. Install mbed CLI and the GNU ARM Embedded Toolchain (4.9.3).
@@ -30,11 +39,24 @@ You can run this application without access to a LoRaWAN network. [fota-lora-rad
 
 You can fake packet loss by commenting lines in `src/packets.h`.
 
+## Program outline
+
+The program:
+
+1. Initializes the flash driver.
+1. Initializes a fragmentation session.
+1. Feeds packets (from `packets.h`) into the fragmentation session, until the session is complete.
+1. Calculates CRC64 hash of the packet.
+    * Send this hash to your LoRaWAN network provider in a `DATABLOCK_AUTH_REQ` message, for verification.
+1. Calculates SHA256 hash of the packet (starting at offset 256, ignoring the signature).
+1. Verifies the SHA256 hash against the public key in `update_certs.h` through RSA.
+1. If everything is OK, writes an `UpdateParams_t` struct to flash. The bootloader checks for this struct for update instructions.
+
+To automatically restart the board when the program finishes, invoke `NVIC_SystemReset()`.
+
 ## How to add a flash driver
 
 If you're using a different flash chip, you'll need to implement the [BlockDevice](https://docs.mbed.com/docs/mbed-os-api-reference/en/latest/APIs/storage/block_device/) interface. See `AT45BlockDevice.h` in the `at45-blockdevice` driver for more information.
-
-The algorithm expects to be able to write to random addresses, which can span over multiple pages. The flash interface is supposed to hide this from the algorithm. For an example see the `AT45BlockDevice.h` driver.
 
 ## Updating the application
 

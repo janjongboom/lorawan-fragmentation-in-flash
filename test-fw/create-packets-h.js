@@ -2,14 +2,25 @@ const fs = require('fs');
 const Path = require('path');
 const execSync = require('child_process').execSync;
 
-const bin = Path.resolve(process.argv[2]);
+const binaryPath = Path.resolve(process.argv[2]);
+const tempFilePath = Path.join(__dirname, 'temp.bin');
 
-const infile = execSync('python ' + Path.join(__dirname, 'encode_file.py') + ' ' + bin + ' 204 20').toString('utf-8').split('\n');
+// now we need to create a signature...
+let signature = execSync(`openssl dgst -sha256 -sign ${Path.join(__dirname, 'certs', 'update.key')} ${binaryPath}`);
+console.log('Signed signature is', signature.toString('hex'));
+
+// now make a temp file which contains signature + bin
+fs.writeFileSync(tempFilePath, Buffer.concat([ signature, fs.readFileSync(binaryPath) ]));
+
+// Invoke encode_file.py to make packets...
+const infile = execSync('python ' + Path.join(__dirname, 'encode_file.py') + ' ' + tempFilePath + ' 204 20').toString('utf-8').split('\n');
 
 // compile crc64 app
 execSync(`gcc ${Path.join(__dirname, 'calculate-crc64', 'main.cpp')} -o ${Path.join(__dirname, 'calculate-crc64', 'crc64')}`);
-const hash = execSync(`${Path.join(__dirname, 'calculate-crc64', 'crc64')} ${bin}`).toString('utf-8');
-console.log('hash is ', hash);
+// calculate CRC64 hash
+const hash = execSync(`${Path.join(__dirname, 'calculate-crc64', 'crc64')} ${tempFilePath}`).toString('utf-8');
+console.log('CRC64 hash is', hash);
+
 
 const outfile = process.argv[3];
 
@@ -30,7 +41,7 @@ for (let line of infile) {
 header[1] = header[1] << 4;
 [header[2], header[3]] = [header[3], header[2]];
 
-let sz = fs.statSync(bin).size;
+let sz = fs.statSync(tempFilePath).size;
 if (sz % 204 === 0) {
     header.push(0);
 }
@@ -43,7 +54,7 @@ for (let f of fragments) {
     [f[1], f[2]] = [f[2], f[1]];
 }
 
-let data = `/*
+let packetsData = `/*
 * PackageLicenseDeclared: Apache-2.0
 * Copyright (c) 2017 ARM Limited
 *
@@ -65,19 +76,46 @@ let data = `/*
 
 #include "mbed.h"
 
-uint8_t FAKE_PACKETS_HEADER[] = { ${header.map(n => '0x' + n.toString(16)).join(', ')} };
+const uint8_t FAKE_PACKETS_HEADER[] = { ${header.map(n => '0x' + n.toString(16)).join(', ')} };
 
-uint8_t FAKE_PACKETS[][207] = {
+const uint8_t FAKE_PACKETS[][207] = {
 `;
 
 for (let f of fragments) {
-    data += '    { ' + f.join(', ') + ' },\n';
+    packetsData += '    { ' + f.join(', ') + ' },\n';
 }
-data += `};
+packetsData += `};
 
-uint64_t FAKE_PACKETS_HASH = 0x${hash};
+// Normally this value is retrieved from the network, but here we hard-code to do the check
+uint64_t FAKE_PACKETS_CRC64_HASH = 0x${hash};
 
 #endif
 `;
 
-fs.writeFileSync(outfile, data, 'utf-8');
+fs.writeFileSync(Path.join(__dirname, '../src', 'packets.h'), packetsData, 'utf-8');
+
+// Now create the certificate keys
+let pubkey = execSync(`openssl rsa -pubin -text -noout < ${Path.join(__dirname, 'certs/update.pub')}`).toString('utf-8');
+let exponent = pubkey.match(/0x(\d+)/)[1];
+if (exponent.length === 5) exponent = '0' + exponent; //?? not sure if this is good
+let modulus = [];
+
+for (let l of pubkey.split('\n')) {
+    if (l.indexOf('    ') === 0) {
+        modulus = modulus.concat(l.trim().split(':').filter(f => !!f));
+    }
+}
+
+let certs = `#ifndef _UPDATE_CERTS_H
+#define _UPDATE_CERTS_H
+
+const char * UPDATE_CERT_PUBKEY_N = "${modulus.join('')}";
+const char * UPDATE_CERT_PUBKEY_E = "${exponent}";
+
+#endif // _UPDATE_CERTS_H_
+`;
+fs.writeFileSync(Path.join(__dirname, '../src', 'update_certs.h'), certs, 'utf-8');
+
+fs.unlinkSync(tempFilePath);
+
+console.log('Done, written to packets.h and update_certs.h')

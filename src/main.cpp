@@ -16,18 +16,26 @@
  */
 
 #include "mbed.h"
+#include "mbed_lorawan_frag_lib.h"
 #include "packets.h"
 #include "AT45BlockDevice.h"
-#include "FragmentationSession.h"
-#include "FragmentationCrc64.h"
-#include "UpdateParameters.h"
+#include "update_params.h"
+#include "update_certs.h"
 #include "mbed_debug.h"
-
-// These values need to be the same between target application and bootloader!
-#define     FOTA_INFO_PAGE         0x1800    // The information page for the firmware update
-#define     FOTA_UPDATE_PAGE       0x1801    // The update starts at this page (and then continues)
+#include "mbed_stats.h"
 
 Serial pc(USBTX, USBRX);
+
+// Print heap statistics
+static void print_heap_stats(uint8_t prefix = 0) {
+    mbed_stats_heap_t heap_stats;
+    mbed_stats_heap_get(&heap_stats);
+
+    if (prefix != 0) {
+        debug("%d ", prefix);
+    }
+    debug("Heap stats: %d / %d (max=%d)\n", heap_stats.current_size, heap_stats.reserved_size, heap_stats.max_size);
+}
 
 int main() {
     pc.baud(9600);
@@ -54,7 +62,6 @@ int main() {
     // Declare the fragSession on the heap so we can free() it when CRC'ing the result in flash
     FragmentationSession* fragSession = new FragmentationSession(&at45, opts);
 
-    // with 26 packets, 204 size, 25 padding, 10 redundancy, we use 322 bytes of heap space
     if ((result = fragSession->initialize()) != FRAG_OK) {
         debug("FragmentationSession initialize failed: %s\n", FragmentationSession::frag_result_string(result));
         return 1;
@@ -62,7 +69,7 @@ int main() {
 
     // Process the frames in the FAKE_PACKETS array
     for (size_t ix = 0; ix < sizeof(FAKE_PACKETS) / sizeof(FAKE_PACKETS[0]); ix++) {
-        uint8_t* buffer = FAKE_PACKETS[ix];
+        uint8_t* buffer = (uint8_t*)FAKE_PACKETS[ix];
         uint16_t frameCounter = (buffer[2] << 8) + buffer[1];
 
         // Skip the first 3 bytes, as they contain metadata
@@ -85,26 +92,78 @@ int main() {
     delete fragSession;
 
     // Calculate the CRC of the data in flash to see if the file was unpacked correctly
+    uint64_t crc_res;
     // To calculate the CRC on desktop see 'calculate-crc64/main.cpp'
-    uint8_t crc_buffer[128];
+    {
+        uint8_t crc_buffer[128];
 
-    FragmentationCrc64 crc64(&at45, crc_buffer, sizeof(crc_buffer));
-    uint64_t crc_res = crc64.calculate(opts.FlashOffset, (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
+        FragmentationCrc64 crc64(&at45, crc_buffer, sizeof(crc_buffer));
+        crc_res = crc64.calculate(opts.FlashOffset, (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
 
-    if (FAKE_PACKETS_HASH == crc_res) {
-        debug("Hash verification OK (%08llx)\n", crc_res);
+        // This hash needs to be sent to the network to verify that the packet originated from the network
+        if (FAKE_PACKETS_CRC64_HASH == crc_res) {
+            debug("CRC64 Hash verification OK (%08llx)\n", crc_res);
+        }
+        else {
+            debug("CRC64 Hash verification NOK, hash was %08llx, expected %08llx\n", crc_res, FAKE_PACKETS_CRC64_HASH);
+            return 1;
+        }
     }
-    else {
-        debug("Hash verification NOK, hash was %08llx, expected %08llx\n", crc_res, FAKE_PACKETS_HASH);
-        return 1;
-    }
 
+    // Calculate the SHA256 hash of the file, and then verify whether the signature was signed with a trusted private key
+    unsigned char sha_out_buffer[32];
+    {
+        uint8_t sha_buffer[128];
+
+        // SHA256 requires a large buffer, alloc on heap instead of stack
+        FragmentationSha256* sha256 = new FragmentationSha256(&at45, sha_buffer, sizeof(sha_buffer));
+
+        // The first FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
+        sha256->calculate(
+            opts.FlashOffset + FOTA_SIGNATURE_LENGTH,
+            (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH,
+            sha_out_buffer);
+
+        debug("SHA256 hash is: ");
+        for (size_t ix = 0; ix < 32; ix++) {
+            debug("%02x", sha_out_buffer[ix]);
+        }
+        debug("\n");
+
+        delete sha256;
+
+        // We need to read the signature, it's the first FOTA_SIGNATURE_LENGTH bytes of the package
+        {
+            // Read this into the signature structure straight from flash
+            unsigned char signature[FOTA_SIGNATURE_LENGTH];
+            at45.read(signature, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
+
+            // debug("RSA signature is: ");
+            // for (size_t ix = 0; ix < FOTA_SIGNATURE_LENGTH; ix++) {
+            //     debug("%02x", signature[ix]);
+            // }
+            // debug("\n");
+
+            // RSA requires a large buffer, alloc on heap instead of stack
+            FragmentationRsaVerify* rsa = new FragmentationRsaVerify(UPDATE_CERT_PUBKEY_N, UPDATE_CERT_PUBKEY_E);
+            bool valid = rsa->verify(sha_out_buffer, signature, sizeof(signature));
+            if (!valid) {
+                debug("RSA verification of firmware failed\n");
+                return 1;
+            }
+            else {
+                debug("RSA verification OK\n");
+            }
+
+            delete rsa;
+        }
+    }
     // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
     UpdateParams_t update_params;
     update_params.update_pending = 1;
     update_params.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding;
     update_params.signature = UpdateParams_t::MAGIC;
-    update_params.hash = crc_res;
+    memcpy(update_params.sha256_hash, sha_out_buffer, sizeof(sha_out_buffer));
     at45.program(&update_params, FOTA_INFO_PAGE * at45.get_read_size(), sizeof(UpdateParams_t));
 
     debug("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", FOTA_INFO_PAGE);
