@@ -37,6 +37,19 @@ static void print_heap_stats(uint8_t prefix = 0) {
     debug("Heap stats: %d / %d (max=%d)\n", heap_stats.current_size, heap_stats.reserved_size, heap_stats.max_size);
 }
 
+static bool compare_buffers(uint8_t* buff1, const uint8_t* buff2, size_t size) {
+    for (size_t ix = 0; ix < size; ix++) {
+        if (buff1[ix] != buff2[ix]) return false;
+    }
+    return true;
+}
+
+static void print_buffer(void* buff, size_t size) {
+    for (size_t ix = 0; ix < size; ix++) {
+        debug("%02x", ((uint8_t*)buff)[ix]);
+    }
+}
+
 int main() {
     pc.baud(9600);
 
@@ -110,6 +123,20 @@ int main() {
         }
     }
 
+    // Read out the header of the package...
+    UpdateSignature_t* header = new UpdateSignature_t();
+    at45.read(header, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
+
+    if (!compare_buffers(header->manufacturer_uuid, UPDATE_CERT_MANUFACTURER_UUID, 16)) {
+        debug("Manufacturer UUID does not match\n");
+        return 1;
+    }
+
+    if (!compare_buffers(header->device_class_uuid, UPDATE_CERT_DEVICE_CLASS_UUID, 16)) {
+        debug("Manufacturer UUID does not match\n");
+        return 1;
+    }
+
     // Calculate the SHA256 hash of the file, and then verify whether the signature was signed with a trusted private key
     unsigned char sha_out_buffer[32];
     {
@@ -132,12 +159,8 @@ int main() {
 
         delete sha256;
 
-        // We need to read the signature, it's the first FOTA_SIGNATURE_LENGTH bytes of the package
+        // now check that the signature is correct...
         {
-            // Read this into the signature structure straight from flash
-            unsigned char signature[FOTA_SIGNATURE_LENGTH];
-            at45.read(signature, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
-
             // debug("RSA signature is: ");
             // for (size_t ix = 0; ix < FOTA_SIGNATURE_LENGTH; ix++) {
             //     debug("%02x", signature[ix]);
@@ -146,7 +169,7 @@ int main() {
 
             // RSA requires a large buffer, alloc on heap instead of stack
             FragmentationRsaVerify* rsa = new FragmentationRsaVerify(UPDATE_CERT_PUBKEY_N, UPDATE_CERT_PUBKEY_E);
-            bool valid = rsa->verify(sha_out_buffer, signature, sizeof(signature));
+            bool valid = rsa->verify(sha_out_buffer, header->signature, sizeof(header->signature));
             if (!valid) {
                 debug("RSA verification of firmware failed\n");
                 return 1;
@@ -158,6 +181,9 @@ int main() {
             delete rsa;
         }
     }
+
+    free(header);
+
     // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
     UpdateParams_t update_params;
     update_params.update_pending = 1;

@@ -20,6 +20,8 @@ $ openssl genrsa -out certs/update.key 2048
 $ openssl rsa -pubout -in certs/update.key -out update.pub
 ```
 
+Firmware is also tagged with a device manufacturer UUID and device class UUID, used to prevent flashing the wrong application.
+
 ## Generating an application package
 
 1. Compile an image for Multi-Tech xDot with bootloader enabled (the same bootloader as in this project, so the offsets are correct).
@@ -27,6 +29,7 @@ $ openssl rsa -pubout -in certs/update.key -out update.pub
 1. Run:
 
     ```
+    $ npm install
     $ node create-packets-h.js my-app_application.bin ../src/packets.h
     ```
 
