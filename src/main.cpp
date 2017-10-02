@@ -187,7 +187,8 @@ int main() {
     // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
     UpdateParams_t update_params;
     update_params.update_pending = 1;
-    update_params.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding;
+    update_params.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH;
+    update_params.offset = opts.FlashOffset + FOTA_SIGNATURE_LENGTH;
     update_params.signature = UpdateParams_t::MAGIC;
     memcpy(update_params.sha256_hash, sha_out_buffer, sizeof(sha_out_buffer));
     at45.program(&update_params, FOTA_INFO_PAGE * at45.get_read_size(), sizeof(UpdateParams_t));
