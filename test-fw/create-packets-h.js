@@ -101,31 +101,6 @@ uint64_t FAKE_PACKETS_CRC64_HASH = 0x${hash};
 
 fs.writeFileSync(Path.join(__dirname, '../src', 'packets.h'), packetsData, 'utf-8');
 
-// Now create the certificate keys
-let pubkey = execSync(`openssl rsa -pubin -text -noout < ${Path.join(__dirname, 'certs/update.pub')}`).toString('utf-8');
-let exponent = pubkey.match(/0x(\d+)/)[1];
-if (exponent.length === 5) exponent = '0' + exponent; //?? not sure if this is good
-let modulus = [];
-
-for (let l of pubkey.split('\n')) {
-    if (l.indexOf('    ') === 0) {
-        modulus = modulus.concat(l.trim().split(':').filter(f => !!f));
-    }
-}
-
-let certs = `#ifndef _UPDATE_CERTS_H
-#define _UPDATE_CERTS_H
-
-const char * UPDATE_CERT_PUBKEY_N = "${modulus.join('')}";
-const char * UPDATE_CERT_PUBKEY_E = "${exponent}";
-
-const uint8_t UPDATE_CERT_MANUFACTURER_UUID[16] = { ${Array.from(manufacturerUUID).map(c => '0x' + c.toString(16)).join(', ')} };
-const uint8_t UPDATE_CERT_DEVICE_CLASS_UUID[16] = { ${Array.from(deviceClassUUID).map(c => '0x' + c.toString(16)).join(', ')} };
-
-#endif // _UPDATE_CERTS_H_
-`;
-fs.writeFileSync(Path.join(__dirname, '../src', 'update_certs.h'), certs, 'utf-8');
-
 fs.unlinkSync(tempFilePath);
 
-console.log('Done, written to packets.h and update_certs.h')
+console.log('Done, written to packets.h')

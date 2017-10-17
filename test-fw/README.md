@@ -16,8 +16,7 @@ A firmware needs to be signed with a private key. You find the keys in the `cert
 To create new keys, run:
 
 ```
-$ openssl genrsa -out certs/update.key 2048
-$ openssl rsa -pubout -in certs/update.key -out update.pub
+$ node generate-keys.js
 ```
 
 Firmware is also tagged with a device manufacturer UUID and device class UUID, used to prevent flashing the wrong application.
@@ -30,8 +29,8 @@ Firmware is also tagged with a device manufacturer UUID and device class UUID, u
 
     ```
     $ npm install
-    $ node create-packets-h.js my-app_application.bin ../src/packets.h
+    $ node create-packets-h.js my-app_application.bin
     ```
 
-1. This command creates the `packets.h` and the `update_certs.h` files.
+1. This command creates the `packets.h` files.
 1. Re-compile lorawan-fragmentation-in-flash and see the xDot update to your new application.

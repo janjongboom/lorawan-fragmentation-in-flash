@@ -1,8 +1,14 @@
 {
-    "macros": ["CBC=0", "EBC=1", "MBED_HEAP_STATS_ENABLED=1"],
+    "macros": [
+        "CBC=0",
+        "EBC=1",
+        "MBED_HEAP_STATS_ENABLED=1",
+        "MBEDTLS_MPI_WINDOW_SIZE=1",
+        "MBEDTLS_MPI_MAX_SIZE=512"
+    ],
     "target_overrides": {
         "XDOT_L151CC": {
-            "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
+            "target.bootloader_img": "bootloader/xdot-at45-symlinked.bin"
         }
     }
 }

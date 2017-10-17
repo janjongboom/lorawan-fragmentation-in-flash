@@ -145,7 +145,7 @@ int main() {
         // SHA256 requires a large buffer, alloc on heap instead of stack
         FragmentationSha256* sha256 = new FragmentationSha256(&at45, sha_buffer, sizeof(sha_buffer));
 
-        // The first FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
+        // // The first FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
         sha256->calculate(
             opts.FlashOffset + FOTA_SIGNATURE_LENGTH,
             (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH,
@@ -157,28 +157,24 @@ int main() {
         }
         debug("\n");
 
-        delete sha256;
-
         // now check that the signature is correct...
         {
-            // debug("RSA signature is: ");
-            // for (size_t ix = 0; ix < FOTA_SIGNATURE_LENGTH; ix++) {
-            //     debug("%02x", signature[ix]);
-            // }
-            // debug("\n");
+            debug("ECDSA signature is: ");
+            for (size_t ix = 0; ix < 71; ix++) {
+                debug("%02x", header->signature[ix]);
+            }
+            debug("\n");
 
-            // RSA requires a large buffer, alloc on heap instead of stack
-            FragmentationRsaVerify* rsa = new FragmentationRsaVerify(UPDATE_CERT_PUBKEY_N, UPDATE_CERT_PUBKEY_E);
-            bool valid = rsa->verify(sha_out_buffer, header->signature, sizeof(header->signature));
+            // ECDSA requires a large buffer, alloc on heap instead of stack
+            FragmentationEcdsaVerify* ecdsa = new FragmentationEcdsaVerify(UPDATE_CERT_PUBKEY, UPDATE_CERT_LENGTH);
+            bool valid = ecdsa->verify(sha_out_buffer, header->signature, 71);
             if (!valid) {
-                debug("RSA verification of firmware failed\n");
+                debug("ECDSA verification of firmware failed\n");
                 return 1;
             }
             else {
-                debug("RSA verification OK\n");
+                debug("ECDSA verification OK\n");
             }
-
-            delete rsa;
         }
     }
 

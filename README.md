@@ -7,18 +7,21 @@ It:
 * Demonstrates how to use [mbed-lorawan-frag-lib](https://github.com/janjongboom/mbed-lorawan-frag-lib) - a library for Low-Density Parity Encoding - to store an incoming firmware update in flash and use forward error correction to fix missing packets.
 * Stores all firmware packets in external flash (AT45 SPI Flash).
 * Integrates with a [bootloader](https://github.com/janjongboom/lorawan-at45-fota-bootloader), which will check the flash on startup, and uses the FlashIAP API to perform the firmware update.
-* Verifies that firmware was signed by a trusted party using RSA/SHA256 with public key held on device, and private key held by manufacturer.
+* Verifies that firmware was signed by a trusted party using ECDSA/SHA256 with public key held on device, and private key held by manufacturer.
 
 You can run this application without access to a LoRaWAN network. [fota-lora-radio](https://github.com/armmbed/fota-lora-radio) uses the same libraries but also comes with a LoRa stack.
 
 ## Package format
 
-A firmware packet consists of two blocks:
+A firmware packet consists of a number of blocks, defined in the `UpdateSignature_t` type:
 
-* RSA/SHA256 signature of the actual firmware (256 bytes).
+* ECDSA/SHA256 signature of the actual firmware (71 bytes).
+* Manufacturer UUID.
+* Device Class UUID.
+* Diff header (4 bytes).
 * Actual firmware.
 
-These two blocks should be concatenated.
+These blocks should be concatenated, see `create-packets-h.js`.
 
 ## How to get started
 
@@ -50,7 +53,7 @@ The program:
 1. Calculates CRC64 hash of the packet.
     * Send this hash to your LoRaWAN network provider in a `DATABLOCK_AUTH_REQ` message, for verification.
 1. Calculates SHA256 hash of the packet (starting at offset 256, ignoring the signature).
-1. Verifies the SHA256 hash against the public key in `update_certs.h` through RSA.
+1. Verifies the SHA256 hash against the public key in `update_certs.h` through ECDSA.
 1. If everything is OK, writes an `UpdateParams_t` struct to flash. The bootloader checks for this struct for update instructions.
 
 To automatically restart the board when the program finishes, invoke `NVIC_SystemReset()`.

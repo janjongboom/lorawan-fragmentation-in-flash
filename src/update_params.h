@@ -41,8 +41,8 @@ struct UpdateParams_t {
 };
 
 // This structure contains the update header (which is the first FOTA_SIGNATURE_LENGTH bytes of a package)
-typedef struct {
-    unsigned char signature[256];       // RSA/SHA256 signature, signed with private key of the firmware (after applying patching)
+typedef struct __attribute__((__packed__)) {
+    unsigned char signature[71];        // ECDSA/SHA256 signature, signed with private key of the firmware (after applying patching)
     uint8_t manufacturer_uuid[16];      // Manufacturer UUID
     uint8_t device_class_uuid[16];      // Device Class UUID
 
