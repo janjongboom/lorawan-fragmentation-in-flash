@@ -17,6 +17,13 @@ const tempFilePath = Path.join(__dirname, 'temp.bin');
 let signature = execSync(`openssl dgst -sha256 -sign ${Path.join(__dirname, 'certs', 'update.key')} ${binaryPath}`);
 console.log('Signed signature is', signature.toString('hex'));
 
+if (signature.length === 70) {
+    signature = Buffer.concat([ signature, Buffer.from([ 0, 0 ]) ]);
+}
+else if (signature.length === 71) {
+    signature = Buffer.concat([ signature, Buffer.from([ 0 ]) ]);
+}
+
 // now make a temp file which contains signature + class IDs + if it's a diff or not + bin
 fs.writeFileSync(tempFilePath, Buffer.concat([ signature, manufacturerUUID, deviceClassUUID, isDiffBuffer, fs.readFileSync(binaryPath) ]));
 
