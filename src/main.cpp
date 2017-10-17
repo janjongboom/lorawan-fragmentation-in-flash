@@ -160,14 +160,14 @@ int main() {
         // now check that the signature is correct...
         {
             debug("ECDSA signature is: ");
-            for (size_t ix = 0; ix < 71; ix++) {
+            for (size_t ix = 0; ix < header->signature_length; ix++) {
                 debug("%02x", header->signature[ix]);
             }
             debug("\n");
 
             // ECDSA requires a large buffer, alloc on heap instead of stack
             FragmentationEcdsaVerify* ecdsa = new FragmentationEcdsaVerify(UPDATE_CERT_PUBKEY, UPDATE_CERT_LENGTH);
-            bool valid = ecdsa->verify(sha_out_buffer, header->signature, 71);
+            bool valid = ecdsa->verify(sha_out_buffer, header->signature, header->signature_length);
             if (!valid) {
                 debug("ECDSA verification of firmware failed\n");
                 return 1;
