@@ -1,10 +1,10 @@
 #ifndef _UPDATE_CERTS_H
 #define _UPDATE_CERTS_H
 
-const char * UPDATE_CERT_PUBKEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEg/62sSMzwq6B7EiS6E6bQMc9nAxV\n8LcCPn+F9GIqmkPTOdKUNB0mQXBCsr6LUN5eyRFVBaDRkAKfqsMxQQDP3w==\n-----END PUBLIC KEY-----\n";
+const char * UPDATE_CERT_PUBKEY = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEvt5wK2Mi99mxCyeadYMFKlGOS2A7\nAal3tJyTXjWApjzUMfhqvp9+GlC58iSPkCX7euW4YGiKR3uqdvUTOsTYoQ==\n-----END PUBLIC KEY-----\n";
 const size_t UPDATE_CERT_LENGTH = 179;
 
 const uint8_t UPDATE_CERT_MANUFACTURER_UUID[16] = { 0x35, 0xa4, 0x66, 0xb8, 0x8b, 0x16, 0x50, 0x77, 0xaf, 0x86, 0x47, 0x7a, 0x5c, 0x23, 0xe8, 0xca };
-const uint8_t UPDATE_CERT_DEVICE_CLASS_UUID[16] = { 0xae, 0xe9, 0x49, 0x9d, 0xa5, 0x4e, 0x58, 0xa8, 0xb2, 0x3e, 0x22, 0x92, 0x1d, 0xc5, 0xc7, 0xa9 };
+const uint8_t UPDATE_CERT_DEVICE_CLASS_UUID[16] = { 0x67, 0x6d, 0x7f, 0xc7, 0x86, 0x16, 0x55, 0xc6, 0x97, 0xc3, 0x1a, 0x42, 0x8b, 0xe6, 0x46, 0x17 };
 
 #endif // _UPDATE_CERTS_H_

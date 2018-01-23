@@ -164,6 +164,7 @@ int main() {
                 debug("%02x", header->signature[ix]);
             }
             debug("\n");
+            debug("Verifying signature...\n");
 
             // ECDSA requires a large buffer, alloc on heap instead of stack
             FragmentationEcdsaVerify* ecdsa = new FragmentationEcdsaVerify(UPDATE_CERT_PUBKEY, UPDATE_CERT_LENGTH);
