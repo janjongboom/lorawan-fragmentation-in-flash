@@ -53,7 +53,7 @@ The program:
 1. Calculates CRC64 hash of the packet.
     * Send this hash to your LoRaWAN network provider in a `DATABLOCK_AUTH_REQ` message, for verification.
 1. Calculates SHA256 hash of the packet (starting at offset 256, ignoring the signature).
-1. Verifies the SHA256 hash against the public key in `update_certs.h` through ECDSA.
+1. Verifies the SHA256 hash against the public key in `UpdateCerts.h` through ECDSA.
 1. If everything is OK, writes an `UpdateParams_t` struct to flash. The bootloader checks for this struct for update instructions.
 
 To automatically restart the board when the program finishes, invoke `NVIC_SystemReset()`.

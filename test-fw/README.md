@@ -11,7 +11,7 @@ The scripts in this folder can create a new package to test firmware updates wit
 
 ## Keys
 
-A firmware needs to be signed with a private key. You find the keys in the `certs` directory. The public key needs to be included in the device firmware (in the `update_certs.h` file), which uses the key to verify that the firmware was signed with the private key.
+A firmware needs to be signed with a private key. You find the keys in the `certs` directory. The public key needs to be included in the device firmware (in the `UpdateCerts.h` file), which uses the key to verify that the firmware was signed with the private key.
 
 To create new keys, run:
 

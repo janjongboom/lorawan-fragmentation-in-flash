@@ -60,7 +60,7 @@ const uint8_t UPDATE_CERT_DEVICE_CLASS_UUID[16] = { ${Array.from(deviceClassUUID
 #endif // _UPDATE_CERTS_H_
 `;
 
-console.log('Writing update_certs.h');
-fs.writeFileSync(Path.join(certsFolder, 'update_certs.h'), certs, 'utf-8');
-fs.writeFileSync(Path.join(__dirname, '..', 'src', 'update_certs.h'), certs, 'utf-8');
-console.log('Writing update_certs.h OK');
+console.log('Writing UpdateCerts.h');
+fs.writeFileSync(Path.join(certsFolder, 'UpdateCerts.h'), certs, 'utf-8');
+fs.writeFileSync(Path.join(__dirname, '..', 'src', 'UpdateCerts.h'), certs, 'utf-8');
+console.log('Writing UpdateCerts.h OK');

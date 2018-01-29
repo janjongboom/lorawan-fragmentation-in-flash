@@ -20,7 +20,7 @@
 #include "packets.h"
 #include "AT45BlockDevice.h"
 #include "update_params.h"
-#include "update_certs.h"
+#include "UpdateCerts.h"
 #include "mbed_debug.h"
 #include "mbed_stats.h"
 
