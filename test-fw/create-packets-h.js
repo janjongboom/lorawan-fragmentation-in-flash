@@ -3,6 +3,7 @@ const Path = require('path');
 const execSync = require('child_process').execSync;
 const UUID = require('uuid-1345');
 const deviceId = require('./certs/device-ids');
+const crc64 = require('./calculate-crc64/crc');
 
 let manufacturerUUID = new UUID(deviceId['manufacturer-uuid']).toBuffer();
 let deviceClassUUID = new UUID(deviceId['device-class-uuid']).toBuffer();
@@ -32,10 +33,8 @@ fs.writeFileSync(tempFilePath, Buffer.concat([ sigLength, signature, manufacture
 // Invoke encode_file.py to make packets...
 const infile = execSync('python ' + Path.join(__dirname, 'encode_file.py') + ' ' + tempFilePath + ' 204 20').toString('utf-8').split('\n');
 
-// compile crc64 app
-execSync(`gcc ${Path.join(__dirname, 'calculate-crc64', 'main.cpp')} -o ${Path.join(__dirname, 'calculate-crc64', 'crc64')}`);
 // calculate CRC64 hash
-const hash = execSync(`${Path.join(__dirname, 'calculate-crc64', 'crc64')} ${tempFilePath}`).toString('utf-8');
+const hash = crc64(fs.readFileSync(tempFilePath));
 console.log('CRC64 hash is', hash);
 
 const outfile = process.argv[3];
