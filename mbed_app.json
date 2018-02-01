@@ -9,6 +9,9 @@
         "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
     ],
     "target_overrides": {
+        "*": {
+            "platform.stdio-convert-newlines": true
+        },
         "XDOT_L151CC": {
             "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
         },
