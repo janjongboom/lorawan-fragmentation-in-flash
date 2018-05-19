@@ -1,0 +1,5 @@
+{
+    "ignore": [
+        "./at45-blockdevice"
+    ]
+}
