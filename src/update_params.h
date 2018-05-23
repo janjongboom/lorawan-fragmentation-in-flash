@@ -42,11 +42,7 @@ struct UpdateParams_t {
 
 // This structure contains the update header (which is the first FOTA_SIGNATURE_LENGTH bytes of a package)
 typedef struct __attribute__((__packed__)) {
-    uint8_t signature_length;           // Length of the ECDSA/SHA256 signature
-    unsigned char signature[72];        // ECDSA/SHA256 signature, signed with private key of the firmware (after applying patching), length is 70, 71 or 72
-    uint8_t manufacturer_uuid[16];      // Manufacturer UUID
-    uint8_t device_class_uuid[16];      // Device Class UUID
-
+    uint32_t manifest_size;
     uint32_t diff_info;                 // first byte indicates whether this is a diff, last three bytes are the size of the *old* file
 } UpdateSignature_t;
 

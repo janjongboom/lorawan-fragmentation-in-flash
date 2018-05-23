@@ -25,7 +25,7 @@ These blocks should be concatenated, see `create-packets-h.js`.
 
 ## How to get started
 
-1. Install mbed CLI and the GNU ARM Embedded Toolchain (4.9.3).
+1. Install Mbed CLI and the GNU ARM Embedded Toolchain 6.
 1. Import this repository:
 
     ```
@@ -42,6 +42,14 @@ These blocks should be concatenated, see `create-packets-h.js`.
 1. Attach a serial monitor at baud rate 9,600 to see the update happening.
 
 You can fake packet loss by commenting lines in `src/packets.h`.
+
+### Running in the simulator
+
+This application also runs in the [Mbed Simulator](https://github.com/janjongboom/mbed-simulator):
+
+```
+$ mbed-simulator .
+```
 
 ## Program outline
 

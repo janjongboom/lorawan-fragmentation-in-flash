@@ -5,12 +5,30 @@
         "MBED_HEAP_STATS_ENABLED=1",
         "MBEDTLS_MPI_WINDOW_SIZE=1",
         "MBEDTLS_MPI_MAX_SIZE=512",
+        "ARM_UC_USE_PAL_CRYPTO=0",
+        "MBED_CLOUD_CLIENT_UPDATE_STORAGE=ARM_UCP_FLASHIAP",
+        "ARM_UC_USE_KCM=0",
+        "ARM_UC_USE_RAW_CONFIG=1",
+        "ARM_UC_ENABLE_PUBKEY=0",
+        "ARM_UC_ENABLE_PSK=1",
+
+        "MBED_CLOUD_DEV_UPDATE_ID=1",
+        "MBED_CLOUD_DEV_UPDATE_CERT=1",
 
         "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
     ],
     "target_overrides": {
         "*": {
-            "platform.stdio-convert-newlines": true
+            "platform.stdio-convert-newlines": true,
+            "update-client.application-details" : "(40*1024)",
+            "update-client.bootloader-details"  : "0x5544",
+            "update-client.storage-address"     : "(436*1024)",
+            "update-client.storage-size"        : "(388*1024)",
+            "update-client.storage-locations"   : 1,
+            "update-client.storage-page"        : 8,
+            "target.features_add": ["COMMON_PAL"],
+            "mbed-trace.enable": 1,
+            "nanostack-hal.event-loop-dispatch-from-application": true
         },
         "XDOT_L151CC": {
             "target.bootloader_img": "bootloader/xdot-at45-develop.bin"

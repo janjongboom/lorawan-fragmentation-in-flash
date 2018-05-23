@@ -1,34 +1,35 @@
 const fs = require('fs');
 const Path = require('path');
 const execSync = require('child_process').execSync;
-const UUID = require('uuid-1345');
-const deviceId = require('./certs/device-ids');
 const crc64 = require('./calculate-crc64/crc');
-
-let manufacturerUUID = new UUID(deviceId['manufacturer-uuid']).toBuffer();
-let deviceClassUUID = new UUID(deviceId['device-class-uuid']).toBuffer();
-
-// diff info contains (bool is_diff, 3 bytes for the size of the *old* firmware)
-let isDiffBuffer = Buffer.from([ 0, 0, 0, 0 ]);
 
 const binaryPath = Path.resolve(process.argv[2]);
 const tempFilePath = Path.join(__dirname, 'temp.bin');
 
-// now we need to create a signature...
-let signature = execSync(`openssl dgst -sha256 -sign ${Path.join(__dirname, 'certs', 'update.key')} ${binaryPath}`);
-console.log('Signed signature is', signature.toString('hex'));
+let manifest = execSync(`manifest-tool create -p "${binaryPath}"`);
 
-let sigLength = Buffer.from([ signature.length ]);
+// so the format is going to be...
+// * 4 bytes size of manifest
+// * 4 bytes diff header
+// * manifest
+// * firmware
 
-if (signature.length === 70) {
-    signature = Buffer.concat([ signature, Buffer.from([ 0, 0 ]) ]);
-}
-else if (signature.length === 71) {
-    signature = Buffer.concat([ signature, Buffer.from([ 0 ]) ]);
-}
+let manifestSizeBuffer = Buffer.from([
+    manifest.length & 0xff,
+    manifest.length >> 8 & 0xff,
+    manifest.length >> 16 & 0xff,
+    0,
+]);
+
+console.log('manifest', manifest);
+
+fs.writeFileSync(Path.join(__dirname, 'temp.manifest'), manifest);
+
+// diff info contains (bool is_diff, 3 bytes for the size of the *old* firmware)
+let isDiffBuffer = Buffer.from([ 0, 0, 0, 0 ]);
 
 // now make a temp file which contains signature + class IDs + if it's a diff or not + bin
-fs.writeFileSync(tempFilePath, Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, isDiffBuffer, fs.readFileSync(binaryPath) ]));
+fs.writeFileSync(tempFilePath, Buffer.concat([ manifestSizeBuffer, isDiffBuffer, manifest, fs.readFileSync(binaryPath) ]));
 
 // Invoke encode_file.py to make packets...
 const infile = execSync('python ' + Path.join(__dirname, 'encode_file.py') + ' ' + tempFilePath + ' 204 20').toString('utf-8').split('\n');
