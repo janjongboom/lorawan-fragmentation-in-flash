@@ -18,13 +18,20 @@
 #include "mbed.h"
 #include "mbed_lorawan_frag_lib.h"
 #include "packets.h"
-#include "AT45BlockDevice.h"
 #include "update_params.h"
 #include "UpdateCerts.h"
 #include "mbed_debug.h"
 #include "mbed_stats.h"
 
-Serial pc(USBTX, USBRX);
+#ifdef TARGET_SIMULATOR
+// Initialize a persistent block device with 512 bytes block size, and 256 blocks (128K of storage)
+#include "SimulatorBlockDevice.h"
+SimulatorBlockDevice bd("lorawan-frag-in-flash", 256 * 512, 512);
+#else
+// Flash interface on the L-TEK xDot shield
+#include "AT45BlockDevice.h"
+AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
+#endif
 
 // Print heap statistics
 static void print_heap_stats(uint8_t prefix = 0) {
@@ -51,13 +58,12 @@ static void print_buffer(void* buff, size_t size) {
 }
 
 int main() {
-    pc.baud(9600);
+    // Wrap the block device to allow for unaligned reads/writes
+    FragmentationBlockDeviceWrapper fbd(&bd);
 
-    // Flash interface on the L-TEK xDot shield
-    AT45BlockDevice at45;
-    int at45_init;
-    if ((at45_init = at45.init()) != BD_ERROR_OK) {
-        debug("Failed to initialize AT45BlockDevice (%d)\n", at45_init);
+    int bd_init;
+    if ((bd_init = fbd.init()) != BD_ERROR_OK) {
+        debug("Failed to initialize BlockDevice (%d)\n", bd_init);
         return 1;
     }
 
@@ -68,12 +74,12 @@ int main() {
     opts.FragmentSize = FAKE_PACKETS_HEADER[4];
     opts.Padding = FAKE_PACKETS_HEADER[6];
     opts.RedundancyPackets = (sizeof(FAKE_PACKETS) / sizeof(FAKE_PACKETS[0])) - opts.NumberOfFragments;
-    opts.FlashOffset = FOTA_UPDATE_PAGE * at45.get_read_size();
+    opts.FlashOffset = MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET;
 
     FragResult result;
 
     // Declare the fragSession on the heap so we can free() it when CRC'ing the result in flash
-    FragmentationSession* fragSession = new FragmentationSession(&at45, opts);
+    FragmentationSession* fragSession = new FragmentationSession(&fbd, opts);
 
     if ((result = fragSession->initialize()) != FRAG_OK) {
         debug("FragmentationSession initialize failed: %s\n", FragmentationSession::frag_result_string(result));
@@ -99,6 +105,7 @@ int main() {
         }
 
         debug("Processed frame with frame counter %d\n", frameCounter);
+        wait_ms(1);
     }
 
     // The data is now in flash. Free the fragSession
@@ -110,7 +117,7 @@ int main() {
     {
         uint8_t crc_buffer[128];
 
-        FragmentationCrc64 crc64(&at45, crc_buffer, sizeof(crc_buffer));
+        FragmentationCrc64 crc64(&fbd, crc_buffer, sizeof(crc_buffer));
         crc_res = crc64.calculate(opts.FlashOffset, (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
 
         // This hash needs to be sent to the network to verify that the packet originated from the network
@@ -123,9 +130,11 @@ int main() {
         }
     }
 
+    wait_ms(1);
+
     // Read out the header of the package...
     UpdateSignature_t* header = new UpdateSignature_t();
-    at45.read(header, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
+    fbd.read(header, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
 
     if (!compare_buffers(header->manufacturer_uuid, UPDATE_CERT_MANUFACTURER_UUID, 16)) {
         debug("Manufacturer UUID does not match\n");
@@ -133,9 +142,13 @@ int main() {
     }
 
     if (!compare_buffers(header->device_class_uuid, UPDATE_CERT_DEVICE_CLASS_UUID, 16)) {
-        debug("Manufacturer UUID does not match\n");
+        debug("Device Class UUID does not match\n");
         return 1;
     }
+
+    debug("Manufacturer and Device Class UUID match\n");
+
+    wait_ms(1);
 
     // Calculate the SHA256 hash of the file, and then verify whether the signature was signed with a trusted private key
     unsigned char sha_out_buffer[32];
@@ -143,7 +156,7 @@ int main() {
         uint8_t sha_buffer[128];
 
         // SHA256 requires a large buffer, alloc on heap instead of stack
-        FragmentationSha256* sha256 = new FragmentationSha256(&at45, sha_buffer, sizeof(sha_buffer));
+        FragmentationSha256* sha256 = new FragmentationSha256(&fbd, sha_buffer, sizeof(sha_buffer));
 
         // // The first FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
         sha256->calculate(
@@ -179,6 +192,8 @@ int main() {
         }
     }
 
+    wait_ms(1);
+
     free(header);
 
     // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
@@ -188,9 +203,9 @@ int main() {
     update_params.offset = opts.FlashOffset + FOTA_SIGNATURE_LENGTH;
     update_params.signature = UpdateParams_t::MAGIC;
     memcpy(update_params.sha256_hash, sha_out_buffer, sizeof(sha_out_buffer));
-    at45.program(&update_params, FOTA_INFO_PAGE * at45.get_read_size(), sizeof(UpdateParams_t));
+    // bd.program(&update_params, FOTA_INFO_PAGE * bd.get_read_size(), sizeof(UpdateParams_t));
 
-    debug("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", FOTA_INFO_PAGE);
+    debug("Stored the update parameters in flash on page 0x%x. Reset the board to apply update.\n", 0x0/*FOTA_INFO_PAGE*/);
 
     wait(osWaitForever);
 }

@@ -23,8 +23,6 @@
 #define _MBED_FOTA_UPDATE_PARAMS
 
 // These values need to be the same between target application and bootloader!
-#define     FOTA_INFO_PAGE         0x1800                       // The information page for the firmware update
-#define     FOTA_UPDATE_PAGE       0x1801                       // The update starts at this page (and then continues)
 #define     FOTA_SIGNATURE_LENGTH  sizeof(UpdateSignature_t)    // Length of RSA signature + class UUIDs + diff struct (5 bytes) -> matches sizeof(UpdateSignature_t)
 
 // This structure is shared between the bootloader and the target application

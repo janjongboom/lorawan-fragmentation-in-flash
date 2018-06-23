@@ -1,0 +1,6 @@
+{
+    "ignore": [
+        "./at45-blockdevice"
+    ],
+    "disableTlsNullEntropy": true
+}
