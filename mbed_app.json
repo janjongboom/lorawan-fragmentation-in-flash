@@ -31,6 +31,10 @@
         "fragmentation-storage-offset": {
             "help": "Address in external flash where to start storing fragments, needs to be erase & write sector aligned",
             "value": "0x0"
+        },
+        "update-client-application-details": {
+            "help": "Location in *internal* flash to store application details",
+            "value": "0x0"
         }
     },
     "macros": [
@@ -46,11 +50,15 @@
         "*": {
             "platform.stdio-convert-newlines": true
         },
-        "XDOT_L151CC": {
-            "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
-        },
         "FF1705_L151CC": {
-            "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
+            "flash-start-address"              : "0x08000000",
+            "flash-size"                       : "(256*1024)",
+            "sotp-section-1-address"           : "(MBED_CONF_APP_FLASH_START_ADDRESS+32*1024)",
+            "sotp-section-1-size"              : "(1*1024)",
+            "sotp-section-2-address"           : "(MBED_CONF_APP_FLASH_START_ADDRESS+33*1024)",
+            "sotp-section-2-size"              : "(1*1024)",
+            "update-client-application-details": "0x8008800",
+            "target.mbed_app_start"            : "0x8008c00"
         }
     }
 }
