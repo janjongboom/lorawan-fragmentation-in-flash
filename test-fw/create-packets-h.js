@@ -27,8 +27,10 @@ else if (signature.length === 71) {
     signature = Buffer.concat([ signature, Buffer.from([ 0 ]) ]);
 }
 
-// now make a temp file which contains signature + class IDs + if it's a diff or not + bin
-fs.writeFileSync(tempFilePath, Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, isDiffBuffer, fs.readFileSync(binaryPath) ]));
+let manifest = Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, isDiffBuffer ]);
+
+// now make a temp file which contains bin + signature + class IDs + if it's a diff or not
+fs.writeFileSync(tempFilePath, Buffer.concat([ fs.readFileSync(binaryPath), manifest ]));
 
 // Invoke encode_file.py to make packets...
 const infile = execSync('python ' + Path.join(__dirname, 'encode_file.py') + ' ' + tempFilePath + ' 204 20').toString('utf-8').split('\n');
@@ -71,7 +73,7 @@ for (let f of fragments) {
 
 let packetsData = `/*
 * PackageLicenseDeclared: Apache-2.0
-* Copyright (c) 2017 ARM Limited
+* Copyright (c) 2018 ARM Limited
 *
 * Licensed under the Apache License, Version 2.0 (the "License");
 * you may not use this file except in compliance with the License.

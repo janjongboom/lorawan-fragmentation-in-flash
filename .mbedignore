@@ -1,3 +1,5 @@
 fragmentation/FotaCore/
 fragmentation/FragmentationPackage/
 test-fw/
+update-client-hub-common/test/
+update-client-hub-common/TESTS/

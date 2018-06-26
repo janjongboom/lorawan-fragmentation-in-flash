@@ -1,0 +1,7 @@
+{
+    "ignore": [
+        "./at45-blockdevice",
+        "./update-client-hub-common/test/"
+    ],
+    "disableTlsNullEntropy": true
+}

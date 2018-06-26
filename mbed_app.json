@@ -1,22 +1,71 @@
 {
+    "config": {
+        "sotp-section-1-address": {
+            "help": "Flash sector address for SOTP sector 1",
+            "macro_name": "PAL_INTERNAL_FLASH_SECTION_1_ADDRESS",
+            "value": null
+        },
+        "sotp-section-1-size": {
+            "help": "Flash sector size for SOTP sector 1",
+            "macro_name": "PAL_INTERNAL_FLASH_SECTION_1_SIZE",
+            "value": null
+        },
+        "sotp-section-2-address": {
+            "help": "Flash sector address for SOTP sector 2",
+            "macro_name": "PAL_INTERNAL_FLASH_SECTION_2_ADDRESS",
+            "value": null
+        },
+        "sotp-section-2-size": {
+            "help": "Flash sector size for SOTP sector 2",
+            "macro_name": "PAL_INTERNAL_FLASH_SECTION_2_SIZE",
+            "value": null
+        },
+        "flash-start-address": {
+            "help": "Start address of internal flash",
+            "value": null
+        },
+        "flash-size": {
+            "help": "Total size of internal flash. Only used in this config to help the definition of other macros.",
+            "value": null
+        },
+        "fragmentation-bootloader-header-offset": {
+            "help": "Address in external flash where to store the header for the bootloader, needs to be erase & write sector aligned",
+            "value": "0"
+        },
+        "fragmentation-storage-offset": {
+            "help": "Address in external flash where to start storing fragments, needs to be erase & write sector aligned",
+            "value": "0x210"
+        },
+        "update-client-application-details": {
+            "help": "Location in *internal* flash to store application details (used by the combine script)",
+            "value": "0x0"
+        }
+    },
     "macros": [
         "CBC=0",
         "EBC=1",
         "MBED_HEAP_STATS_ENABLED=1",
         "MBEDTLS_MPI_WINDOW_SIZE=1",
         "MBEDTLS_MPI_MAX_SIZE=512",
+        "ARM_UC_USE_PAL_CRYPTO=0",
 
         "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
     ],
     "target_overrides": {
         "*": {
-            "platform.stdio-convert-newlines": true
-        },
-        "XDOT_L151CC": {
-            "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
+            "platform.stdio-convert-newlines": true,
+            "platform.stdio-baud-rate": 115200,
+            "platform.stdio-flush-at-exit": false
         },
         "FF1705_L151CC": {
-            "target.bootloader_img": "bootloader/xdot-at45-develop.bin"
+            "flash-start-address"              : "0x08000000",
+            "flash-size"                       : "(256*1024)",
+            "sotp-section-1-address"           : "(MBED_CONF_APP_FLASH_START_ADDRESS+32*1024)",
+            "sotp-section-1-size"              : "(1*1024)",
+            "sotp-section-2-address"           : "(MBED_CONF_APP_FLASH_START_ADDRESS+33*1024)",
+            "sotp-section-2-size"              : "(1*1024)",
+            "update-client-application-details": "0x8008000",
+            "target.mbed_app_start"            : "0x8008400"
         }
     }
 }

@@ -23,22 +23,7 @@
 #define _MBED_FOTA_UPDATE_PARAMS
 
 // These values need to be the same between target application and bootloader!
-#define     FOTA_INFO_PAGE         0x1800                       // The information page for the firmware update
-#define     FOTA_UPDATE_PAGE       0x1801                       // The update starts at this page (and then continues)
 #define     FOTA_SIGNATURE_LENGTH  sizeof(UpdateSignature_t)    // Length of RSA signature + class UUIDs + diff struct (5 bytes) -> matches sizeof(UpdateSignature_t)
-
-// This structure is shared between the bootloader and the target application
-// it contains information on whether there's an update pending, and the hash of the update
-struct UpdateParams_t {
-    bool update_pending;                // whether there's a pending update
-    size_t size;                        // size of the update
-    uint32_t offset;                    // Location of the patch in flash
-    unsigned char sha256_hash[32];      // SHA256 hash of the update block
-
-    uint32_t signature;                 // the value of MAGIC (to indicate that we actually wrote to this block)
-
-    static const uint32_t MAGIC = 0x1BEAC000;
-};
 
 // This structure contains the update header (which is the first FOTA_SIGNATURE_LENGTH bytes of a package)
 typedef struct __attribute__((__packed__)) {
