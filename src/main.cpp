@@ -23,12 +23,11 @@
 #include "mbed_debug.h"
 #include "mbed_stats.h"
 #include "arm_uc_metadata_header_v2.h"
-#include "swap_int.h"
 
 #ifdef TARGET_SIMULATOR
-// Initialize a persistent block device with 512 bytes block size, and 256 blocks (128K of storage)
+// Initialize a persistent block device with 528 bytes block size, and 256 blocks (mimicks the at45, which also has 528 size blocks)
 #include "SimulatorBlockDevice.h"
-SimulatorBlockDevice bd("lorawan-frag-in-flash", 256 * 512, 512);
+SimulatorBlockDevice bd("lorawan-frag-in-flash", 256 * 528, 528);
 #else
 // Flash interface on the L-TEK xDot shield
 #include "AT45BlockDevice.h"
@@ -55,7 +54,7 @@ static bool compare_buffers(uint8_t* buff1, const uint8_t* buff2, size_t size) {
 
 static void print_buffer(void* buff, size_t size) {
     for (size_t ix = 0; ix < size; ix++) {
-        debug("%02x", ((uint8_t*)buff)[ix]);
+        debug("%02x ", ((uint8_t*)buff)[ix]);
     }
 }
 
@@ -76,8 +75,7 @@ int main() {
     opts.FragmentSize = FAKE_PACKETS_HEADER[4];
     opts.Padding = FAKE_PACKETS_HEADER[6];
     opts.RedundancyPackets = (sizeof(FAKE_PACKETS) / sizeof(FAKE_PACKETS[0])) - opts.NumberOfFragments;
-    // reserve page with offset 0x0 for the header
-    opts.FlashOffset = MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET + sizeof(arm_uc_external_header_t);
+    opts.FlashOffset = MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET;
 
     FragResult result;
 
@@ -108,7 +106,7 @@ int main() {
         }
 
         debug("Processed frame with frame counter %d\n", frameCounter);
-        wait_ms(1);
+        wait_ms(50); // @todo: this is really weird, writing these in quick succession leads to corrupt image... need to investigate.
     }
 
     // The data is now in flash. Free the fragSession
@@ -135,9 +133,12 @@ int main() {
 
     wait_ms(1);
 
+    // the signature is the last FOTA_SIGNATURE_LENGTH bytes of the package
+    size_t signatureOffset = opts.FlashOffset + ((opts.NumberOfFragments * opts.FragmentSize) - opts.Padding) - FOTA_SIGNATURE_LENGTH;
+
     // Read out the header of the package...
     UpdateSignature_t* header = new UpdateSignature_t();
-    fbd.read(header, opts.FlashOffset, FOTA_SIGNATURE_LENGTH);
+    fbd.read(header, signatureOffset, FOTA_SIGNATURE_LENGTH);
 
     if (!compare_buffers(header->manufacturer_uuid, UPDATE_CERT_MANUFACTURER_UUID, 16)) {
         debug("Manufacturer UUID does not match\n");
@@ -161,9 +162,9 @@ int main() {
         // SHA256 requires a large buffer, alloc on heap instead of stack
         FragmentationSha256* sha256 = new FragmentationSha256(&fbd, sha_buffer, sizeof(sha_buffer));
 
-        // // The first FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
+        // // The last FOTA_SIGNATURE_LENGTH bytes are reserved for the sig, so don't use it for calculating the SHA256 hash
         sha256->calculate(
-            opts.FlashOffset + FOTA_SIGNATURE_LENGTH,
+            opts.FlashOffset,
             (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH,
             sha_out_buffer);
 
@@ -183,15 +184,15 @@ int main() {
             debug("Verifying signature...\n");
 
             // ECDSA requires a large buffer, alloc on heap instead of stack
-            // FragmentationEcdsaVerify* ecdsa = new FragmentationEcdsaVerify(UPDATE_CERT_PUBKEY, UPDATE_CERT_LENGTH);
-            // bool valid = ecdsa->verify(sha_out_buffer, header->signature, header->signature_length);
-            // if (!valid) {
-            //     debug("ECDSA verification of firmware failed\n");
-            //     return 1;
-            // }
-            // else {
-            //     debug("ECDSA verification OK\n");
-            // }
+            FragmentationEcdsaVerify* ecdsa = new FragmentationEcdsaVerify(UPDATE_CERT_PUBKEY, UPDATE_CERT_LENGTH);
+            bool valid = ecdsa->verify(sha_out_buffer, header->signature, header->signature_length);
+            if (!valid) {
+                debug("ECDSA verification of firmware failed\n");
+                return 1;
+            }
+            else {
+                debug("ECDSA verification OK\n");
+            }
         }
     }
 
@@ -199,126 +200,38 @@ int main() {
 
     free(header);
 
-    uint8_t sha512hash[] = { 0x9d, 0xb3, 0xe7, 0x3b, 0x06, 0x25, 0x8b, 0x84, 0xd6, 0x4f, 0x0b, 0x4b,
-                             0x95, 0x90, 0x45, 0x37, 0xa2, 0x9f, 0x53, 0xa9, 0x5b, 0x33, 0x08, 0xcb,
-                             0xce, 0xc4, 0xa6, 0x6d, 0x6a, 0x34, 0xc4, 0x81, 0x7f, 0x50, 0xec, 0xfb,
-                             0xee, 0xff, 0x4c, 0x49, 0x9d, 0x56, 0x32, 0xe5, 0x26, 0x98, 0x7e, 0x00,
-                             0x0a, 0x65, 0xe1, 0x2d, 0x9a, 0xf1, 0xa1, 0xde, 0x66, 0x94, 0x90, 0xda,
-                             0xbd, 0x68, 0x03, 0x2a };
+    // Hash is matching, now write the header so the bootloader can flash the update
+    arm_uc_firmware_details_t details;
+    details.version = static_cast<uint64_t>(MBED_BUILD_TIMESTAMP) + 3; // should be timestamp that the fw was built, this is to get around this
+    details.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH;
+    memcpy(details.hash, sha_out_buffer, 32); // SHA256 hash of the firmware
+    memset(details.campaign, 0, ARM_UC_GUID_SIZE); // todo, add campaign info
+    details.signatureSize = 0; // not sure what this is used for
 
-    // Hash is matching, now populate the FOTA_INFO_PAGE with information about the update, so the bootloader can flash the update
-    arm_uc_external_header_t uc_header;
-    uc_header.headerMagic = swap_uint32(ARM_UC_EXTERNAL_HEADER_MAGIC_V2);
-    uc_header.headerVersion = swap_uint32(ARM_UC_EXTERNAL_HEADER_VERSION_V2);
-    uc_header.firmwareVersion = swap_uint64(0xffffffffffffffff); // should be timestamp but OK, we're just testing
-    uc_header.firmwareSize = swap_uint64((opts.NumberOfFragments * opts.FragmentSize) - opts.Padding);
-    memcpy(uc_header.firmwareHash, sha512hash, sizeof(sha512hash));
-    uc_header.firmwareTransformationMode = 0;
-    uc_header.firmwareSignatureSize = 0;
-    uc_header.payloadSize = 0;
+    uint8_t *fw_header_buff = (uint8_t*)malloc(ARM_UC_EXTERNAL_HEADER_SIZE_V2);
+    if (!fw_header_buff) {
+        debug("Could not allocate %d bytes for header\n", ARM_UC_EXTERNAL_HEADER_SIZE_V2);
+        return 1;
+    }
 
-    printf("sizeof thingy is %d\n", sizeof(arm_uc_external_header_t));
+    arm_uc_buffer_t buff = { ARM_UC_EXTERNAL_HEADER_SIZE_V2, ARM_UC_EXTERNAL_HEADER_SIZE_V2, fw_header_buff };
 
-    fbd.program(&uc_header, MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET, sizeof(arm_uc_external_header_t));
+    arm_uc_error_t err = arm_uc_create_external_header_v2(&details, &buff);
 
-    uint8_t *poep = (uint8_t*)malloc(528);
-    bd.read(poep, 0x0, 528);
-    print_buffer(poep, 528);
+    if (err.error != ERR_NONE) {
+        debug("Failed to create external header (%d)\n", err.error);
+        return 1;
+    }
+
+    int r = fbd.program(buff.ptr, MBED_CONF_APP_FRAGMENTATION_BOOTLOADER_HEADER_OFFSET, buff.size);
+    if (r != BD_ERROR_OK) {
+        debug("Failed to program firmware header: %d bytes at address 0x%x\n", buff.size, MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET);
+        return 1;
+    }
 
     debug("Stored the update parameters in flash on 0x%x. Reset the board to apply update.\n", MBED_CONF_APP_FRAGMENTATION_STORAGE_OFFSET);
 
     bd.deinit();
-
-
-    /*
-// typedef struct _arm_uc_external_header_t
-// {
-//     /* Metadata-header specific magic code */
-//     uint32_t headerMagic;
-
-//     /* Revision number for metadata header. */
-//     uint32_t headerVersion;
-
-//     /* Version number accompanying the firmware. Larger numbers imply more
-//        recent and preferred versions. This is used for determining the
-//        selection order when multiple versions are available. For downloaded
-//        firmware the manifest timestamp is used as the firmware version.
-//     */
-//     uint64_t firmwareVersion;
-
-//     /* Total space (in bytes) occupied by the firmware BLOB. */
-//     uint64_t firmwareSize;
-
-//     /* Firmware hash calculated over the firmware size. Should match the hash
-//        generated by standard command line tools, e.g., shasum on Linux/Mac.
-//     */
-//     uint8_t firmwareHash[ARM_UC_SHA512_SIZE];
-
-//     /* Total space (in bytes) occupied by the payload BLOB.
-//        The payload is the firmware after some form of transformation like
-//        encryption and/or compression.
-//     */
-//     uint64_t payloadSize;
-
-//     /* Payload hash calculated over the payload size. Should match the hash
-//        generated by standard command line tools, e.g., shasum on Linux/Mac.
-//        The payload is the firmware after some form of transformation like
-//        encryption and/or compression.
-//     */
-//     uint8_t payloadHash[ARM_UC_SHA512_SIZE];
-
-//     /* The ID for the update campaign that resulted in the firmware update.
-//     */
-//     uint8_t campaign[ARM_UC_GUID_SIZE];
-
-//     /* Type of transformation used to turn the payload into the firmware image.
-//        Possible values are:
-//      * * NONE
-//      * * AES128_CTR
-//      * * AES128_CBC
-//      * * AES256_CTR
-//      * * AES256_CBC
-//      */
-//     uint32_t firmwareTransformationMode;
-
-//     /* Encrypted firmware encryption key.
-//      * To decrypt the firmware, the bootloader combines the bootloader secret
-//      * and the firmwareKeyDerivationFunctionSeed to create an AES key. It uses
-//      * This AES key to decrypt the firmwareCipherKey. The decrypted
-//      * firmwareCipherKey is the FirmwareKey, which is used with the
-//      * firmwareInitVector to decrypt the firmware.
-//      */
-//     uint8_t firmwareCipherKey[ARM_UC_AES256_KEY_SIZE];
-
-//     /* AES Initialization vector. This is a random number used to protect the
-//        encryption algorithm from attack. It must be unique for every firmware.
-//      */
-//     uint8_t firmwareInitVector[ARM_UC_AES_BLOCK_SIZE];
-
-//     /* Size of the firmware signature. Must be 0 if no signature is supplied. */
-//     uint32_t firmwareSignatureSize;
-
-//     /* Hash based message authentication code for the metadata header. Uses per
-//        device secret as key. Should use same hash algorithm as firmware hash.
-//        The headerHMAC field and firmwareSignature field are not part of the hash.
-//     */
-//     uint8_t headerHMAC[ARM_UC_SHA512_SIZE];
-
-//     /* Optional firmware signature. Hashing algorithm should be the same as the
-//        one used for the firmware hash. The firmwareSignatureSize must be set.
-//     */
-//     uint8_t firmwareSignature[0];
-// } arm_uc_external_header_t;
-
-
-
-    // UpdateParams_t update_params;
-    // update_params.update_pending = 1;
-    // update_params.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH;
-    // update_params.offset = opts.FlashOffset + FOTA_SIGNATURE_LENGTH;
-    // update_params.signature = UpdateParams_t::MAGIC;
-    // memcpy(update_params.sha256_hash, sha_out_buffer, sizeof(sha_out_buffer));
-    // // bd.program(&update_params, FOTA_INFO_PAGE * bd.get_read_size(), sizeof(UpdateParams_t));
 
     wait(osWaitForever);
 }

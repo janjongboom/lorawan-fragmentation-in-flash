@@ -45,7 +45,7 @@ These blocks should be concatenated, see `create-packets-h.js`.
     ```
 
 1. Flash `BUILD/FF1705_L151CC/GCC_ARM/combined.bin` on your [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/) development board (or other xDot with AT45 SPI Flash).
-1. Attach a serial monitor at baud rate 9,600 to see the update happening.
+1. Attach a serial monitor at baud rate 115,200 to see the update happening.
 
 You can fake packet loss by commenting lines in `src/packets.h`.
 
