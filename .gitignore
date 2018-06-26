@@ -10,3 +10,4 @@ mbed-memory-status/
 fake-fw/fragments.txt
 fake-fw/test-crc64/test
 bootloader/xdot-at45-symlinked.bin
+combined.bin
