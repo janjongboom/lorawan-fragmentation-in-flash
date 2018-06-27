@@ -202,7 +202,7 @@ int main() {
 
     // Hash is matching, now write the header so the bootloader can flash the update
     arm_uc_firmware_details_t details;
-    details.version = static_cast<uint64_t>(MBED_BUILD_TIMESTAMP) + 3; // should be timestamp that the fw was built, this is to get around this
+    details.version = static_cast<uint64_t>(MBED_BUILD_TIMESTAMP) + 10; // should be timestamp that the fw was built, this is to get around this
     details.size = (opts.NumberOfFragments * opts.FragmentSize) - opts.Padding - FOTA_SIGNATURE_LENGTH;
     memcpy(details.hash, sha_out_buffer, 32); // SHA256 hash of the firmware
     memset(details.campaign, 0, ARM_UC_GUID_SIZE); // todo, add campaign info
