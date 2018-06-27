@@ -54,16 +54,13 @@ for (let line of infile) {
     }
 }
 
-// so the header format is wrong...
-header[1] = header[1] << 4;
-[header[2], header[3]] = [header[3], header[2]];
-
+// set padding
 let sz = fs.statSync(tempFilePath).size;
 if (sz % 204 === 0) {
-    header.push(0);
+    header[6] = 0;
 }
 else {
-    header.push(204 - (sz % 204));
+    header[6] = 204 - (sz % 204);
 }
 
 // also fragment header is wrong...

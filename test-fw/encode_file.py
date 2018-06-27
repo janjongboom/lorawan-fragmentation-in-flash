@@ -39,7 +39,7 @@ def matrix_line(line_number, line_length):
     nb_coefficient += 1
 
   return matrix_line
-  
+
 
 def main (infile, fragment_size, redundancy):
   fragment_size = int(fragment_size)
@@ -90,7 +90,7 @@ def main (infile, fragment_size, redundancy):
   print "Input data"
   print data
   print ""
-  
+
   rowcount = len(data)/fragment_size
 
   # split into rows of size fragment_size
@@ -126,7 +126,7 @@ def main (infile, fragment_size, redundancy):
 
   datarowsstring = "0x%02X" % data_row_count
   fragmentsizestring = "0x%02X" % fragment_size
-  print ("Fragmentation header likely: [  0x02, 0x01, 0x00, "+datarowsstring+", "+fragmentsizestring+", 0x00 ]")
+  print ("Fragmentation header likely: [  0x02, 0x00, "+datarowsstring+", 0x00, "+fragmentsizestring+", 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 ]")
   for line in data_rows:
     print(line)
 
