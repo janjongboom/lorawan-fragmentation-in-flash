@@ -48,6 +48,7 @@
         "MBEDTLS_MPI_WINDOW_SIZE=1",
         "MBEDTLS_MPI_MAX_SIZE=512",
         "ARM_UC_USE_PAL_CRYPTO=0",
+        "JANPATCH_STREAM=BDFILE",
 
         "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
     ],
