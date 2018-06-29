@@ -2,7 +2,7 @@
     "ignore": [
         "./at45-blockdevice",
         "./mbed-lorawan-update-client/update-client-hub-common/test/",
-        "./mbed-lorawan-update-client/mbed-delta-update/janpatch/cli/"
+        "./mbed-lorawan-update-client/janpatch/cli/"
     ],
     "disableTlsNullEntropy": true
 }

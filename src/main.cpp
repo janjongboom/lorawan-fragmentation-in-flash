@@ -17,10 +17,7 @@
 
 #include "mbed.h"
 #include "packets.h"
-#include "update_params.h"
 #include "UpdateCerts.h"
-#include "mbed_stats.h"
-#include "arm_uc_metadata_header_v2.h"
 #include "LoRaWANUpdateClient.h"
 
 #ifdef TARGET_SIMULATOR
@@ -48,19 +45,6 @@ static void print_heap_stats(uint8_t prefix = 0) {
         printf("%d ", prefix);
     }
     printf("Heap stats: %d / %d (max=%d)\n", heap_stats.current_size, heap_stats.reserved_size, heap_stats.max_size);
-}
-
-static bool compare_buffers(uint8_t* buff1, const uint8_t* buff2, size_t size) {
-    for (size_t ix = 0; ix < size; ix++) {
-        if (buff1[ix] != buff2[ix]) return false;
-    }
-    return true;
-}
-
-static void print_buffer(void* buff, size_t size) {
-    for (size_t ix = 0; ix < size; ix++) {
-        printf("%02x ", ((uint8_t*)buff)[ix]);
-    }
 }
 
 static bool is_complete = false;
