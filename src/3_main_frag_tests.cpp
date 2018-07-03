@@ -56,22 +56,16 @@ static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
     last_message.length = length;
 }
 
-static void lorawan_uc_event_handler(LW_UC_EVENT event) {
-    /* noop */
-}
-
 int main() {
     mbed_trace_init();
 
     LW_UC_STATUS status;
 
-    uc.setEventCallback(&lorawan_uc_event_handler);
-
     {
         printf("1) Test creating frag session with invalid length\n");
 
         const uint8_t header[] = { 0x2, 0x0, 0x28 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         printf("1) %s\n", status == LW_UC_INVALID_PACKET_LENGTH ? "OK" : "NOK");
     }
@@ -81,7 +75,7 @@ int main() {
 
         // frag index 4 is invalid, can only have one...
         const uint8_t header[] = { 0x2, 0b00110000, 0x28, 0x0, 0xcc, 0x0, 0xa7, 0x0, 0x0, 0x0, 0x0 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         if (status != LW_UC_OK) {
             printf("2) NOK - status was not LW_UC_OK, but %d\n", status);
@@ -108,7 +102,7 @@ int main() {
     {
         printf("3) Create session\n");
 
-        status = uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
 
         if (status != LW_UC_OK) {
             printf("2) NOK - status was not LW_UC_OK, but %d\n", status);
@@ -136,16 +130,16 @@ int main() {
         printf("4) Get status\n");
 
         // alright now send 3 packets (2 missing, 0 and 3) and see what status we can read...
-        status = uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS[1], sizeof(FAKE_PACKETS[0]));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS[1], sizeof(FAKE_PACKETS[0]));
         if (status != LW_UC_OK) printf("4) NOK - packet 1 status was not LW_UC_OK, but %d\n", status);
-        uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS[2], sizeof(FAKE_PACKETS[0]));
+        uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS[2], sizeof(FAKE_PACKETS[0]));
         if (status != LW_UC_OK) printf("4) NOK - packet 2 status was not LW_UC_OK, but %d\n", status);
-        uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS[4], sizeof(FAKE_PACKETS[0]));
+        uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS[4], sizeof(FAKE_PACKETS[0]));
         if (status != LW_UC_OK) printf("4) NOK - packet 4 status was not LW_UC_OK, but %d\n", status);
 
         // [7..3] = RFU, 00 = fragIx (which should be active), 1 = all participants
         const uint8_t header[] = { 0x1, 0b00000001 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         if (status != LW_UC_OK) {
             printf("4) NOK - status was not LW_UC_OK, but %d\n", status);
@@ -185,7 +179,7 @@ int main() {
         printf("5) Delete session\n");
 
         const uint8_t header[] = { 0x3, 0 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         if (status != LW_UC_OK) {
             printf("5) NOK - status was not LW_UC_OK, but %d\n", status);
@@ -214,7 +208,7 @@ int main() {
         printf("6) Delete invalid session\n");
 
         const uint8_t header[] = { 0x3, 0b10 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         if (status != LW_UC_OK) {
             printf("6) NOK - status was not LW_UC_OK, but %d\n", status);
@@ -243,7 +237,7 @@ int main() {
         printf("7) Get package version\n");
 
         const uint8_t header[] = { 0x0 };
-        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)header, sizeof(header));
 
         if (status != LW_UC_OK) {
             printf("7) NOK - status was not LW_UC_OK, but %d\n", status);

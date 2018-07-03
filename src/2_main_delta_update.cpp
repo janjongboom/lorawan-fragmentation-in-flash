@@ -63,20 +63,16 @@ static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
     printf("\n");
 }
 
-static void lorawan_uc_event_handler(LW_UC_EVENT event) {
-    switch (event) {
-        case LW_UC_EVENT_FRAGSESSION_COMPLETE:
-            is_complete = true;
-            break;
+static void lorawan_uc_fragsession_complete() {
+    is_complete = true;
+}
 
-        case LW_UC_EVENT_FIRMWARE_READY:
-            printf("Firmware is ready - resetting device to flash new firmware...\n");
+static void lorawan_uc_firmware_ready() {
+    printf("Firmware is ready - resetting device to flash new firmware...\n");
 
 #ifndef TARGET_SIMULATOR
-            NVIC_SystemReset();
+    NVIC_SystemReset();
 #endif
-            break;
-    }
 }
 
 int main() {
@@ -116,9 +112,10 @@ int main() {
 
     LW_UC_STATUS status;
 
-    uc.setEventCallback(&lorawan_uc_event_handler);
+    uc.callbacks.fragSessionComplete = lorawan_uc_fragsession_complete;
+    uc.callbacks.firmwareReady = lorawan_uc_firmware_ready;
 
-    status = uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
+    status = uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
     if (status != LW_UC_OK) {
         printf("Could not parse header (%d)\n", status);
         return 1;
@@ -128,7 +125,7 @@ int main() {
     for (size_t ix = 0; ix < sizeof(FAKE_PACKETS) / sizeof(FAKE_PACKETS[0]); ix++) {
         if (is_complete) break;
 
-        status = uc.handleFragmentationCommand((uint8_t*)FAKE_PACKETS[ix], sizeof(FAKE_PACKETS[0]));
+        status = uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS[ix], sizeof(FAKE_PACKETS[0]));
 
         if (status != LW_UC_OK) {
             printf("FragmentationSession process_frame failed: %u\n", status);
