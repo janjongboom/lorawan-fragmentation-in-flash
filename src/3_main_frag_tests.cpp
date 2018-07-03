@@ -241,6 +241,37 @@ int main() {
         }
     }
 
+    {
+        printf("7) Get package version\n");
+
+        const uint8_t header[] = { 0x0 };
+        status = uc.handleFragmentationCommand((uint8_t*)header, sizeof(header));
+
+        if (status != LW_UC_OK) {
+            printf("7) NOK - status was not LW_UC_OK, but %d\n", status);
+        }
+        else {
+            if (last_message.port != 201) {
+                printf("7) NOK - last_message.port should be 201, but was %d\n", last_message.port);
+            }
+            else if (last_message.length != 3) {
+                printf("7) NOK - last_message.length should be 3, but was %d\n", last_message.length);
+            }
+            else if (last_message.data[0] != 0) {
+                printf("7) NOK - last_message.data[0] should be 0, but was %d\n", last_message.data[0]);
+            }
+            else if (last_message.data[1] != 3) {
+                printf("7) NOK - last_message.data[1] should be 3, but was %d\n", last_message.data[1]);
+            }
+            else if (last_message.data[2] != 1) {
+                printf("7) NOK - last_message.data[2] should be 1, but was %d\n", last_message.data[2]);
+            }
+            else {
+                printf("7) OK\n");
+            }
+        }
+    }
+
     wait(osWaitForever);
 }
 
