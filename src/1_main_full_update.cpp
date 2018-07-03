@@ -38,7 +38,9 @@ AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
 // fwd declaration
 static void fake_send_method(uint8_t, uint8_t*, size_t);
 
-LoRaWANUpdateClient uc(&bd, fake_send_method);
+const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
+
+LoRaWANUpdateClient uc(&bd, APP_KEY, fake_send_method);
 
 // Print heap statistics
 static void print_heap_stats(uint8_t prefix = 0) {
