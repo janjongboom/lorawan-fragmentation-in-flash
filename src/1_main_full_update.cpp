@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+#include "select_program.h"
+
+#if PROGRAM == PROGRAM_FULL_UPDATE
+
 #include "mbed.h"
 #include "packets.h"
 #include "UpdateCerts.h"
@@ -74,6 +78,7 @@ static void lorawan_uc_event_handler(LW_UC_EVENT event) {
 }
 
 int main() {
+    mbed_trace_init();
 
     LW_UC_STATUS status;
 
@@ -107,3 +112,5 @@ int main() {
 
     wait(osWaitForever);
 }
+
+#endif
