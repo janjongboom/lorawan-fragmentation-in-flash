@@ -17,7 +17,7 @@
 
 #include "select_program.h"
 
-#if PROGRAM == PROGRAM_TEST_SETUP
+#if PROGRAM == PROGRAM_TEST_FRAG
 
 #include "mbed.h"
 #include "packets.h"
