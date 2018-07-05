@@ -9,7 +9,8 @@
 #define PROGRAM_TEST_MC              4
 #define PROGRAM_TEST_MC_SWITCH       5
 #define PROGRAM_TEST_UPDATE_OVER_MC  6
+#define PROGRAM_TEST_CLOCK_SYNC      7
 
-#define PROGRAM                      PROGRAM_TEST_UPDATE_OVER_MC
+#define PROGRAM                      PROGRAM_TEST_CLOCK_SYNC
 
 #endif // _SELECT_PROGRAM_H_
