@@ -36,7 +36,7 @@ AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
 
 
 // fwd declaration
-static void fake_send_method(uint8_t, uint8_t*, size_t);
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
 
 const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
 
@@ -50,10 +50,10 @@ typedef struct {
 
 static send_message_t last_message;
 
-static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
-    last_message.port = port;
-    memcpy(last_message.data, data, length);
-    last_message.length = length;
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params) {
+    last_message.port = params.port;
+    memcpy(last_message.data, params.data, params.length);
+    last_message.length = params.length;
 }
 
 int main() {

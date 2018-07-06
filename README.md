@@ -41,7 +41,7 @@ These blocks should be concatenated, see `create-packets-h.js`.
 1. Combine the application with the bootloader:
 
     ```
-    $ python tools/combine_bootloader_with_app.py -a BUILD/FF1705_L151CC/GCC_ARM/lorawan-fragmentation-in-flash.bin -b bootloader/FF1705_L151CC.bin -m FF1705_L151CC -o BUILD/FF1705_L151CC/GCC_ARM/combined.bin
+    $ python tools/combine_bootloader_with_app.py -a BUILD/FF1705_L151CC/GCC_ARM/lorawan-fragmentation-in-flash_application.bin -b bootloader/FF1705_L151CC.bin -m FF1705_L151CC -o BUILD/FF1705_L151CC/GCC_ARM/combined.bin
     ```
 
 1. Flash `BUILD/FF1705_L151CC/GCC_ARM/combined.bin` on your [L-TEK FF1705](https://os.mbed.com/platforms/L-TEK-FF1705/) development board (or other xDot with AT45 SPI Flash).

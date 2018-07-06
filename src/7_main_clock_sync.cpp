@@ -35,7 +35,7 @@ AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
 #endif
 
 // fwd declaration
-static void fake_send_method(uint8_t, uint8_t*, size_t);
+static void fake_send_method(LoRaWANUpdateClientSendParams_t&);
 
 const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
 
@@ -54,14 +54,14 @@ void switch_to_class_a() {
     in_class_c = false;
 }
 
-void switch_to_class_c(uint32_t, uint8_t*, uint8_t*) {
+void switch_to_class_c(LoRaWANUpdateClientClassCSession_t&) {
     in_class_c = true;
 }
 
-static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
-    last_message.port = port;
-    memcpy(last_message.data, data, length);
-    last_message.length = length;
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params) {
+    last_message.port = params.port;
+    memcpy(last_message.data, params.data, params.length);
+    last_message.length = params.length;
 }
 
 int main() {
@@ -104,8 +104,8 @@ int main() {
         else {
             uint32_t curr_time = (last_message.data[4] << 24) + (last_message.data[3] << 16) + (last_message.data[2] << 8) + last_message.data[1];
 
-            if (curr_time - 1214658125 > 4) {
-                printf("1) NOK - curr_time drifts too much from OOB clock sync (difference is %u)\n", curr_time - gpsTime);
+            if (curr_time - gpsTime > 4) {
+                printf("1) NOK - curr_time drifts too much from OOB clock sync (difference is %llu)\n", curr_time - gpsTime);
                 return 1;
             }
         }

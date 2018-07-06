@@ -51,7 +51,7 @@ static void print_buffer(void* buff, size_t size, bool withSpace = true) {
 }
 
 // fwd declaration
-static void fake_send_method(uint8_t, uint8_t*, size_t);
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
 
 const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
 
@@ -63,33 +63,24 @@ typedef struct {
     size_t length;
 } send_message_t;
 
-typedef struct {
-    uint32_t devAddr;
-    uint8_t nwkSKey[16];
-    uint8_t appSKey[16];
-} class_c_creds_t;
-
 static send_message_t last_message;
-static class_c_creds_t class_c;
+static LoRaWANUpdateClientClassCSession_t class_c;
 static bool in_class_c = false;
 static bool is_complete = false;
 static bool is_fw_ready = false;
 
-static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
-    last_message.port = port;
-    memcpy(last_message.data, data, length);
-    last_message.length = length;
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params) {
+    last_message.port = params.port;
+    memcpy(last_message.data, params.data, params.length);
+    last_message.length = params.length;
 }
 
 static void switch_to_class_a() {
     in_class_c = false;
 }
 
-static void switch_to_class_c(uint32_t devAddr, uint8_t *nwkSKey, uint8_t *appSKey) {
-    // @todo: q: is memcpy safe in isr?
-    class_c.devAddr = devAddr;
-    memcpy(class_c.nwkSKey, nwkSKey, 16);
-    memcpy(class_c.appSKey, appSKey, 16);
+static void switch_to_class_c(LoRaWANUpdateClientClassCSession_t &session) {
+    class_c = session;
 
     in_class_c = true;
 }

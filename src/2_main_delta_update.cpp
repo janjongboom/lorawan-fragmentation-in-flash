@@ -36,7 +36,7 @@ AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
 
 
 // fwd declaration
-static void fake_send_method(uint8_t, uint8_t*, size_t);
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
 
 const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
 
@@ -55,10 +55,10 @@ static void print_heap_stats(uint8_t prefix = 0) {
 
 static bool is_complete = false;
 
-static void fake_send_method(uint8_t port, uint8_t *data, size_t length) {
-    printf("Sending %u bytes on port %u: ", length, port);
-    for (size_t ix = 0; ix < length; ix++) {
-        printf("%02x ", data[ix]);
+static void fake_send_method(LoRaWANUpdateClientSendParams_t &params) {
+    printf("Sending %u bytes on port %u: ", params.length, params.port);
+    for (size_t ix = 0; ix < params.length; ix++) {
+        printf("%02x ", params.data[ix]);
     }
     printf("\n");
 }
@@ -68,11 +68,7 @@ static void lorawan_uc_fragsession_complete() {
 }
 
 static void lorawan_uc_firmware_ready() {
-    printf("Firmware is ready - resetting device to flash new firmware...\n");
-
-#ifndef TARGET_SIMULATOR
-    NVIC_SystemReset();
-#endif
+    printf("Firmware is ready - reset the device to flash new firmware...\n");
 }
 
 int main() {

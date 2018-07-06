@@ -56,7 +56,8 @@
         "*": {
             "platform.stdio-convert-newlines": true,
             "platform.stdio-baud-rate": 115200,
-            "platform.stdio-flush-at-exit": false
+            "platform.stdio-flush-at-exit": false,
+            "mbed-trace.enable": 1
         },
         "FF1705_L151CC": {
             "flash-start-address"                       : "0x08000000",
@@ -69,7 +70,7 @@
             "lorawan-update-client.slot1-header-address": "(256*1024 + 272)",
             "lorawan-update-client.slot1-fw-address"    : "(256*1024 + 272 + 0x210)",
             "lorawan-update-client.slot2-header-address": "(512*1024 + (272*2))",
-            "lorawan-update-client.slot2-fw-address"    : "(512*1024 + (272*2) + 0x210)",
+            "lorawan-update-client.slot2-fw-address"    : "(512*1024 + (272*2) + 72)",
             "target.mbed_app_start"                     : "0x8008400"
         },
         "SIMULATOR": {
