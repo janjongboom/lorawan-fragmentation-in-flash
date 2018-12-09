@@ -9,5 +9,5 @@ libxDot-mbed5/
 mbed-memory-status/
 fake-fw/fragments.txt
 fake-fw/test-crc64/test
-bootloader/xdot-at45-symlinked.bin
+bootloader/FF1705_L151CC_linked.bin
 combined.bin

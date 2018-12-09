@@ -54,7 +54,7 @@ void switch_to_class_a() {
     in_class_c = false;
 }
 
-void switch_to_class_c(LoRaWANUpdateClientClassCSession_t&) {
+void switch_to_class_c(LoRaWANUpdateClientClassCSession_t*) {
     in_class_c = true;
 }
 
@@ -91,7 +91,7 @@ int main() {
             return 1;
         }
         else if (last_message.length != 6) {
-            printf("1) NOK - last_message.length should be 6, but was %d\n", last_message.length);
+            printf("1) NOK - last_message.length should be 6, but was %u\n", last_message.length);
             return 1;
         }
         else if (last_message.data[0] != 1) {
@@ -169,7 +169,7 @@ int main() {
             return 1;
         }
         else if (last_message.length != 6) {
-            printf("4) NOK - last_message.length should be 6, but was %d\n", last_message.length);
+            printf("4) NOK - last_message.length should be 6, but was %u\n", last_message.length);
             return 1;
         }
         else if (last_message.data[0] != 1) {
@@ -183,7 +183,7 @@ int main() {
             uint32_t curr_time = (last_message.data[4] << 24) + (last_message.data[3] << 16) + (last_message.data[2] << 8) + last_message.data[1];
 
             if (curr_time - (gpsTime - 2400) > 5) {
-                printf("4) NOK - curr_time drifts too much from OOB clock sync, curr_time=%u, gpsTime=%llu (difference is %u)\n", curr_time, gpsTime, curr_time - (gpsTime - 2400));
+                printf("4) NOK - curr_time drifts too much from OOB clock sync, curr_time=%u, gpsTime=%llu (difference is %llu)\n", curr_time, gpsTime, curr_time - (gpsTime - 2400));
                 return 1;
             }
         }
@@ -232,6 +232,9 @@ int main() {
 
         // so now, send an adjustment of +96 seconds and the MC group should start 2 seconds later...
         int32_t adjust = 96;
+
+        // device needs to trigger this to make sure the request is valid
+        uc.requestClockSync(false);
 
         uint8_t adjustHeader[] = { 1, adjust & 0xff, (adjust >> 8) & 0xff, (adjust >> 16) & 0xff, (adjust >> 24) & 0xff, 0b0001 /* tokenAns */ };
         status = uc.handleClockSyncCommand(adjustHeader, sizeof(adjustHeader));

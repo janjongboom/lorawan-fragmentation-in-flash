@@ -79,8 +79,8 @@ static void switch_to_class_a() {
     in_class_c = false;
 }
 
-static void switch_to_class_c(LoRaWANUpdateClientClassCSession_t &session) {
-    class_c = session;
+static void switch_to_class_c(LoRaWANUpdateClientClassCSession_t *session) {
+    memcpy(&class_c, session, sizeof(LoRaWANUpdateClientClassCSession_t));
 
     in_class_c = true;
 }
