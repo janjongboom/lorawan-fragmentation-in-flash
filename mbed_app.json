@@ -36,8 +36,10 @@
             "help": "Location in *internal* flash to store application details (used by the combine script)",
             "value": "0x0"
         },
-
-        "main_stack_size":     { "value": 4096 }
+        "flash-start-address": {
+            "help": "Start address of internal flash",
+            "value": null
+        }
     },
     "target_overrides": {
         "*": {
@@ -47,15 +49,17 @@
         },
 
         "FF1705_L151CC": {
-            "target.features_add": ["BOOTLOADER"],
+            "target.features_add"                       : ["BOOTLOADER"],
             "lorawan-update-client.max-redundancy"      : "40",
             "lorawan-update-client.slot-size"           : "(256*1024 + 272)",
             "lorawan-update-client.slot0-header-address": "0x0",
             "lorawan-update-client.slot0-fw-address"    : "0x210",
-            "lorawan-update-client.slot1-header-address": "(256*1024 + 272)",
-            "lorawan-update-client.slot1-fw-address"    : "(256*1024 + 272 + 0x210)",
-            "lorawan-update-client.slot2-header-address": "(512*1024 + (272*2))",
-            "lorawan-update-client.slot2-fw-address"    : "(512*1024 + (272*2) + 72)",
+            "lorawan-update-client.slot1-header-address": "0x3ff00",
+            "lorawan-update-client.slot1-fw-address"    : "(0x3ff00 + 0x210)",
+            "lorawan-update-client.slot2-header-address": "0x7fe00",
+            "lorawan-update-client.slot2-fw-address"    : "(0x7fe00 + 72)",
+            "lorawan-update-client.internal-flash-header": "0x08008000",
+            "lorawan-update-client.overwrite-version"   : true,
             "target.app_offset"                         : "0x8400",
             "target.header_offset"                      : "0x8000",
             "target.bootloader_img"                     : "bootloader/FF1705_L151CC_linked.bin"
@@ -68,16 +72,13 @@
             "lorawan-update-client.slot1-header-address": "528*100",
             "lorawan-update-client.slot1-fw-address"    : "528*101",
             "lorawan-update-client.slot2-header-address": "528*200",
-            "lorawan-update-client.slot2-fw-address"    : "528*201"
+            "lorawan-update-client.slot2-fw-address"    : "528*201",
+            "lorawan-update-client.internal-flash-header": "0x0",
+            "flash-start-address"                       : "0x0"
         }
     },
     "macros": [
-        "CBC=0",
-        "EBC=1",
         "MBED_HEAP_STATS_ENABLED=1",
-        "MBEDTLS_MPI_WINDOW_SIZE=1",
-        "MBEDTLS_MPI_MAX_SIZE=512",
-        "ARM_UC_USE_PAL_CRYPTO=0",
         "JANPATCH_STREAM=BDFILE",
         "MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES",
         "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
