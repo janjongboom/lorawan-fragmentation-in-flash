@@ -20,6 +20,7 @@
 #if PROGRAM == PROGRAM_TEST_UPDATE_OVER_MC
 
 #include "mbed.h"
+#include "mbed_mem_trace.h"
 #include "packets.h"
 #include "UpdateCerts.h"
 #include "LoRaWANUpdateClient.h"
@@ -54,8 +55,6 @@ static void print_buffer(void* buff, size_t size, bool withSpace = true) {
 static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
 
 const uint8_t APP_KEY[16] = { 0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf };
-
-LoRaWANUpdateClient uc(&bd, APP_KEY, fake_send_method);
 
 typedef struct {
     uint8_t port;
@@ -95,8 +94,20 @@ static void lorawan_uc_firmware_ready() {
     printf("Firmware is ready\n");
 }
 
+static void clear_mem_trace() {
+    mbed_mem_trace_set_callback(NULL);
+}
+
+static void setup_mem_trace() {
+    mbed_mem_trace_set_callback(mbed_mem_trace_default_callback);
+}
+
 int main() {
     mbed_trace_init();
+    mbed_mem_trace_set_callback(mbed_mem_trace_default_callback);
+
+    LoRaWANUpdateClient *uc = new LoRaWANUpdateClient(&bd, APP_KEY, fake_send_method);
+    uc->printHeapStats("BEGIN ");
 
     LW_UC_STATUS status;
 
@@ -110,16 +121,22 @@ int main() {
     // difference between UTC epoch and GPS epoch is 315964800 seconds
     uint64_t gpsTime = 1214658125; // Tue Jul 03 2018 21:02:35 GMT+0800
 
-    uc.outOfBandClockSync(gpsTime);
+    uc->outOfBandClockSync(gpsTime);
+
+    uc->printHeapStats("OOB CLOCK SYNC ");
 
     // !!! THESE FUNCTIONS RUN IN AN ISR !!!
     // !!! DO NOT DO BLOCKING THINGS IN THEM !!!
-    uc.callbacks.switchToClassA = switch_to_class_a;
-    uc.callbacks.switchToClassC = switch_to_class_c;
+    uc->callbacks.switchToClassA = switch_to_class_a;
+    uc->callbacks.switchToClassC = switch_to_class_c;
 
     // These run in the context that calls the update client
-    uc.callbacks.fragSessionComplete = lorawan_uc_fragsession_complete;
-    uc.callbacks.firmwareReady = lorawan_uc_firmware_ready;
+    uc->callbacks.fragSessionComplete = lorawan_uc_fragsession_complete;
+    uc->callbacks.firmwareReady = lorawan_uc_firmware_ready;
+    uc->callbacks.verificationStarting = clear_mem_trace;
+    uc->callbacks.verificationFinished = setup_mem_trace;
+
+    uc->printHeapStats("CALLBACKS ");
 
     // create new group and start a MC request
     const uint8_t mc_setup_header[] = { 0x2, 0b00,
@@ -128,18 +145,22 @@ int main() {
         0x3, 0x0, 0x0, 0x0, /* minFcCount */
         0x2, 0x10, 0x0, 0x0 /* maxFcCount */
     };
-    status = uc.handleMulticastControlCommand((uint8_t*)mc_setup_header, sizeof(mc_setup_header));
+    status = uc->handleMulticastControlCommand((uint8_t*)mc_setup_header, sizeof(mc_setup_header));
     if (status != LW_UC_OK) {
         printf("1) NOK - Create MC group failed, expected LW_UC_OK, but got %d\n", status);
         return 1;
     }
 
+    uc->printHeapStats("HANDLE MC ");
+
     // create fragmentation group
-    status = uc.handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
+    status = uc->handleFragmentationCommand(0x0, (uint8_t*)FAKE_PACKETS_HEADER, sizeof(FAKE_PACKETS_HEADER));
     if (status != LW_UC_OK) {
         printf("1) NOK - Create fragmentation group failed, expected LW_UC_OK, but got %d\n", status);
         return 1;
     }
+
+    uc->printHeapStats("HANDLE FRAG ");
 
     // start MC session
     uint32_t timeToStart = static_cast<uint32_t>(gpsTime + 2);
@@ -151,11 +172,13 @@ int main() {
         freq & 0xff, (freq >> 8) & 0xff, (freq >> 16) & 0xff,
         3 /* data rate */
     };
-    status = uc.handleMulticastControlCommand((uint8_t*)mc_start_header, sizeof(mc_start_header));
+    status = uc->handleMulticastControlCommand((uint8_t*)mc_start_header, sizeof(mc_start_header));
     if (status != LW_UC_OK) {
         printf("1) NOK - Start MC session failed, expected LW_UC_OK, but got %d\n", status);
         return 1;
     }
+
+    uc->printHeapStats("HANDLE MC CONTROL ");
 
     printf("1) Instructed device with fragmentation session and Class C session - should start in 2 seconds\n");
 
@@ -165,6 +188,8 @@ int main() {
         printf("2) NOK - Did not switch to Class C after 2 seconds\n");
         return 1;
     }
+
+    uc->printHeapStats("BEFORE PKTS ");
 
     // OK, start sending packets with 12.5% packet loss
     // Process the frames in the FAKE_PACKETS array
@@ -182,7 +207,7 @@ int main() {
             continue;
         }
 
-        status = uc.handleFragmentationCommand(0x1824aa3e, (uint8_t*)FAKE_PACKETS[ix], sizeof(FAKE_PACKETS[0]));
+        status = uc->handleFragmentationCommand(0x1824aa3e, (uint8_t*)FAKE_PACKETS[ix], sizeof(FAKE_PACKETS[0]));
 
         if (status != LW_UC_OK) {
             printf("2) NOK - handleFragmentationCommand did not return LW_UC_OK, but %u\n", status);
@@ -190,6 +215,7 @@ int main() {
         }
 
         printf("Processed frame %d\n", ix);
+        uc->printHeapStats("PROCESS FRM ");
 
         if (is_complete) {
             break;
@@ -214,6 +240,12 @@ int main() {
     }
 
     printf("2) OK\n");
+
+    uc->printHeapStats("DONE ");
+
+    delete uc;
+
+    uc->printHeapStats("DELETED UC ");
 
     wait(osWaitForever);
 }

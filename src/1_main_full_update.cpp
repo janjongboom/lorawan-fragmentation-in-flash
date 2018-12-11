@@ -74,8 +74,6 @@ static void lorawan_uc_firmware_ready() {
 int main() {
     mbed_trace_init();
 
-    printf("MBED_BUILD_TIMESTAMP %f\n", MBED_BUILD_TIMESTAMP);
-
     LW_UC_STATUS status;
 
     uc.callbacks.fragSessionComplete = lorawan_uc_fragsession_complete;

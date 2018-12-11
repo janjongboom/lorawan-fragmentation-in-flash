@@ -38,13 +38,16 @@ else if (signature.length === 71) {
     signature = Buffer.concat([ signature, Buffer.from([ 0 ]) ]);
 }
 
+let mtime = fs.statSync(targetFilePath).mtime.getTime() / 1000 | 0;
+let mtimeBuffer = Buffer.from([ mtime & 0xff, (mtime >> 8) & 0xff, (mtime >> 16) & 0xff, (mtime >> 24) & 0xff ]);
+
 let sourceFile = fs.readFileSync(sourceFilePath);
 
 // diff info contains (bool is_diff, 3 bytes for the size of the *old* firmware)
 let isDiffBuffer = Buffer.from([ 1, sourceFile.length >> 16 & 0xff, sourceFile.length >> 8 & 0xff, sourceFile.length & 0xff ]);
 console.log('Diff header is', isDiffBuffer);
 
-let manifest = Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, isDiffBuffer ]);
+let manifest = Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, mtimeBuffer, isDiffBuffer ]);
 
 // now make a temp file which contains bin + signature + class IDs + if it's a diff or not
 fs.writeFileSync(tempFilePath, Buffer.concat([ fs.readFileSync(diffFilePath), manifest ]));

@@ -27,7 +27,10 @@ else if (signature.length === 71) {
     signature = Buffer.concat([ signature, Buffer.from([ 0 ]) ]);
 }
 
-let manifest = Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, isDiffBuffer ]);
+let mtime = fs.statSync(binaryPath).mtime.getTime() / 1000 | 0;
+let mtimeBuffer = Buffer.from([ mtime & 0xff, (mtime >> 8) & 0xff, (mtime >> 16) & 0xff, (mtime >> 24) & 0xff ]);
+
+let manifest = Buffer.concat([ sigLength, signature, manufacturerUUID, deviceClassUUID, mtimeBuffer, isDiffBuffer ]);
 
 // now make a temp file which contains bin + signature + class IDs + if it's a diff or not
 fs.writeFileSync(tempFilePath, Buffer.concat([ fs.readFileSync(binaryPath), manifest ]));
