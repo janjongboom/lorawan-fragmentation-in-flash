@@ -62,7 +62,7 @@
             "lorawan-update-client.overwrite-version"   : true,
             "target.app_offset"                         : "0x8400",
             "target.header_offset"                      : "0x8000",
-            "target.bootloader_img"                     : "bootloader/FF1705_L151CC_linked.bin"
+            "target.bootloader_img"                     : "bootloader/FF1705_L151CC.bin"
         },
         "SIMULATOR": {
             "lorawan-update-client.max-redundancy"      : "40",
@@ -81,6 +81,7 @@
         "MBED_HEAP_STATS_ENABLED=1",
         "JANPATCH_STREAM=BDFILE",
         "MBEDTLS_NO_DEFAULT_ENTROPY_SOURCES",
-        "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\""
+        "MBEDTLS_CONFIG_FILE=\"fotalora_mbedtls_config.h\"",
+        "MBED_MEM_TRACING_ENABLED=1"
     ]
 }
