@@ -63,6 +63,7 @@ static void lorawan_uc_firmware_ready() {
 
 int main() {
     mbed_trace_init();
+    mbed_trace_exclude_filters_set("QSPIF");
 
     LW_UC_STATUS status;
 
@@ -83,7 +84,7 @@ int main() {
 
         if (status != LW_UC_OK) {
             printf("FragmentationSession process_frame failed: %u\n", status);
-            return 1;
+            break;
         }
 
         if (is_complete) {
@@ -92,7 +93,9 @@ int main() {
 
         printf("Processed frame %d\n", ix);
 
+#ifdef TARGET_FF1705_L151CC
         wait_ms(50); // @todo: this is really weird, writing these in quick succession leads to corrupt image... need to investigate.
+#endif
     }
 
     wait(osWaitForever);

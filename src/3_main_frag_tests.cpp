@@ -23,17 +23,7 @@
 #include "packets.h"
 #include "UpdateCerts.h"
 #include "LoRaWANUpdateClient.h"
-
-#ifdef TARGET_SIMULATOR
-// Initialize a persistent block device with 528 bytes block size, and 256 blocks (mimicks the at45, which also has 528 size blocks)
-#include "SimulatorBlockDevice.h"
-SimulatorBlockDevice bd("lorawan-frag-in-flash", 256 * 528, static_cast<uint64_t>(528));
-#else
-// Flash interface on the L-TEK xDot shield
-#include "AT45BlockDevice.h"
-AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
-#endif
-
+#include "storage_helper.h"
 
 // fwd declaration
 static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
@@ -58,6 +48,7 @@ static void fake_send_method(LoRaWANUpdateClientSendParams_t &params) {
 
 int main() {
     mbed_trace_init();
+    mbed_trace_exclude_filters_set("QSPIF");
 
     LW_UC_STATUS status;
 

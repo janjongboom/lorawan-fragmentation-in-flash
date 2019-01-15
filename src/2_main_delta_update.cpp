@@ -23,17 +23,7 @@
 #include "packets_diff.h"
 #include "UpdateCerts.h"
 #include "LoRaWANUpdateClient.h"
-
-#ifdef TARGET_SIMULATOR
-// Initialize a persistent block device with 528 bytes block size, and 256 blocks (mimicks the at45, which also has 528 size blocks)
-#include "SimulatorBlockDevice.h"
-SimulatorBlockDevice bd("lorawan-frag-in-flash", 256 * 528, static_cast<uint64_t>(528));
-#else
-// Flash interface on the L-TEK xDot shield
-#include "AT45BlockDevice.h"
-AT45BlockDevice bd(SPI_MOSI, SPI_MISO, SPI_SCK, SPI_NSS);
-#endif
-
+#include "storage_helper.h"
 
 // fwd declaration
 static void fake_send_method(LoRaWANUpdateClientSendParams_t &params);
@@ -73,6 +63,7 @@ static void lorawan_uc_firmware_ready() {
 
 int main() {
     mbed_trace_init();
+    mbed_trace_exclude_filters_set("QSPIF");
 
     // Copy data into slot 2
     {
@@ -134,7 +125,9 @@ int main() {
 
         printf("Processed frame %d\n", ix);
 
+#ifdef TARGET_FF1705_L151CC
         wait_ms(50); // @todo: this is really weird, writing these in quick succession leads to corrupt image... need to investigate.
+#endif
     }
 
     wait(osWaitForever);
